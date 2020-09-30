@@ -35,7 +35,7 @@ public class Client extends Thread {
             //and send it.
             client.send(outPacket);
 
-            //that's all for sending. now for receiving from server (self-explantory):
+            //that's all for sending. now for receiving from server (self-explanatory):
             DatagramPacket inPacket = new DatagramPacket(inData,inData.length);
             client.receive(inPacket); //this is a blocking function.
             inData = inPacket.getData();
