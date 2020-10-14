@@ -1,41 +1,36 @@
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.SocketException;
+import java.io.ObjectOutputStream;
+import java.net.*;
 
-public class Server extends Thread{
+public class Server {
 
-    public Server(String threadName){
-        this.setName(threadName);
+    private static byte[] serialize(Object obj) throws IOException {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        ObjectOutputStream os = new ObjectOutputStream(out);
+        os.writeObject(obj);
+        return out.toByteArray();
     }
 
-    public void run(){
+    public static void main(String[] args) throws IOException {
 
-        try {
-            DatagramSocket server = new DatagramSocket(7000);
-            byte[] inData = new byte[1024];
-            byte[] outData = new byte[1024];
+        System.out.println("Starting Server...");
 
-            while(true){
-                DatagramPacket inPacket = new DatagramPacket(inData,inData.length);
-                server.receive(inPacket);
-                System.out.println("Server received: "+new String(inPacket.getData()));
-
-                String confirm = "got it, thanks";
-                outData = confirm.getBytes();
-
-                //datagram packet include the client's IP and port. the server doesnt need to know those information beforehand:
-                DatagramPacket outPacket = new DatagramPacket(outData,outData.length,inPacket.getAddress(),inPacket.getPort());
-                server.send(outPacket);
-            }
+        DatagramSocket serverSocket = new DatagramSocket(9000);
+        byte[] sendData = new byte[1024];
+        byte[] receiveData = new byte[1024];
 
 
-        } catch (SocketException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
+        while(true){
+            DatagramPacket receivePacket = new DatagramPacket(receiveData,receiveData.length);
+            serverSocket.receive((receivePacket));
+            String msg = new String(receivePacket.getData());
+            System.out.println("Received: "+msg);
+            String ack = "hello client";
+            sendData = serialize(ack);
+            DatagramPacket sendPacket = new DatagramPacket(sendData,sendData.length,receivePacket.getAddress(),receivePacket.getPort());
+            serverSocket.send(sendPacket);
         }
-
 
     }
 }
