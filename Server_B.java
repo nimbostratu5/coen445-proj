@@ -17,8 +17,9 @@ public class Server_B {
     public static void main(String[] args) throws IOException {
 
         System.out.println("Starting Server...");
-
-        DatagramSocket serverSocket = new DatagramSocket(9000);
+        //server_B uses a diff port # than server_A but uses the same IP address.
+        //TODO: before demo, we need to modify the code to run with distinct IP addresses.
+        DatagramSocket serverSocket = new DatagramSocket(9001);
         byte[] sendData = new byte[1024];
         byte[] receiveData = new byte[1024];
 
