@@ -3,7 +3,9 @@ import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.net.*;
 
-public class Server {
+public class Server_A {
+
+    private static boolean active = false;
 
     private static byte[] serialize(Object obj) throws IOException {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -19,9 +21,8 @@ public class Server {
         DatagramSocket serverSocket = new DatagramSocket(9000);
         byte[] sendData = new byte[1024];
         byte[] receiveData = new byte[1024];
-
-
-        while(true){
+        active = true;
+        while(active != false){
             DatagramPacket receivePacket = new DatagramPacket(receiveData,receiveData.length);
             serverSocket.receive((receivePacket));
             String msg = new String(receivePacket.getData());
