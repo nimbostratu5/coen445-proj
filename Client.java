@@ -19,8 +19,8 @@ public class Client {
         //test logger class:
         Logger logger = new Logger();
         logger.CreateFile();
-        logger.logEvent("hello this is an event #12310 01237");
-
+        logger.LogEvent("hello this is an event #12310 01237");
+        logger.DisplayLog();
 
         System.out.println("Starting Client");
 
