@@ -1,7 +1,4 @@
 # coen445-proj
-oct. 14: 
-=> single threaded client and server.
-=> abstract serialization function for objects
 
 # How To Run
 1. Compile client and servers with 'javac Client.java Server_A.java Server_B.java'
