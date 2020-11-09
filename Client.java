@@ -1,6 +1,4 @@
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.ObjectOutputStream;
+import java.io.*;
 import java.net.*;
 import java.util.Scanner;
 //to investigate: import java.util.logging.Logger;
@@ -36,6 +34,12 @@ public class Client {
         ObjectOutputStream os = new ObjectOutputStream(out);
         os.writeObject(obj);
         return out.toByteArray();
+    }
+
+    public static Object[] deserialize(byte[] data) throws IOException, ClassNotFoundException {
+        ByteArrayInputStream in = new ByteArrayInputStream(data);
+        ObjectInputStream is = new ObjectInputStream(in);
+        return (Object[]) is.readObject();
     }
 
 
@@ -80,7 +84,6 @@ public class Client {
                 switch (messageType) {
 
                     case "BYE":
-                        logger.LogEvent("client closed application");
                         sc.close();
                         bye = true;
                         break label;
@@ -141,6 +144,7 @@ public class Client {
 
         /*  CLOSE SOCKET -- USER LOGOUT -- CLOSE SESSION  */
         clientSocket.close();
+        logger.LogEvent("client closed application.");
 
     }
 }

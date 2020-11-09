@@ -1,6 +1,4 @@
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.ObjectOutputStream;
+import java.io.*;
 import java.net.*;
 
 public class Server_B {
@@ -14,7 +12,13 @@ public class Server_B {
         return out.toByteArray();
     }
 
-    public static void main(String[] args) throws IOException {
+    public static Object[] deserialize(byte[] data) throws IOException, ClassNotFoundException {
+        ByteArrayInputStream in = new ByteArrayInputStream(data);
+        ObjectInputStream is = new ObjectInputStream(in);
+        return (Object[]) is.readObject();
+    }
+
+    public static void main(String[] args) throws IOException, ClassNotFoundException {
 
         System.out.println("Starting Server...");
         //server_B uses a diff port # than server_A but uses the same IP address.
@@ -27,8 +31,8 @@ public class Server_B {
         while(true){
             DatagramPacket receivePacket = new DatagramPacket(receiveData,receiveData.length);
             serverSocket.receive((receivePacket));
-            String msg = new String(receivePacket.getData());
-            System.out.println("Received: "+msg);
+            Object[] message = deserialize(receivePacket.getData());
+            System.out.println("Received: "+message[0].toString());
             String ack = "hello client";
             sendData = serialize(ack);
             DatagramPacket sendPacket = new DatagramPacket(sendData,sendData.length,receivePacket.getAddress(),receivePacket.getPort());
