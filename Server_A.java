@@ -1,7 +1,7 @@
 import java.io.*;
 import java.net.*;
 
-public class Server_B {
+public class Server_A {
 
     boolean active = false;
 
@@ -21,7 +21,7 @@ public class Server_B {
     public static void main(String[] args) throws IOException, ClassNotFoundException {
 
         System.out.println("Starting Server...");
-        //server_B uses a diff port # than server_A but uses the same IP address.
+        //server_A uses a diff port # than server_B but uses the same IP address.
         //TODO: before demo, we need to modify the code to run with distinct IP addresses.
         DatagramSocket serverSocket = new DatagramSocket(3000);
         DatagramPacket serverPacket = null;

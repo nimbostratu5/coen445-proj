@@ -80,7 +80,7 @@ public class Client {
                 
                 switch (messageType) {
 
-                    case "BYE":
+                    case "BYE" :
                         logger.LogEvent("client closed application");
                         message = new Object[1];
                         message[0] = "bye";
