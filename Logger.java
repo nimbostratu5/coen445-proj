@@ -1,7 +1,9 @@
-import java.io.File;  // Import the File class
+import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
-import java.io.IOException;  // Import the IOException class to handle errors
+import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 public class Logger {
 
@@ -25,8 +27,13 @@ public class Logger {
     public void LogEvent(String event){
 
         try {
+
+            LocalDateTime myDateObj = LocalDateTime.now();
+            DateTimeFormatter myFormatObj = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss");
+            String formattedDate = myDateObj.format(myFormatObj);
+
             FileWriter writer = new FileWriter("log.txt", true);
-            writer.write(event);
+            writer.write(formattedDate+": "+event);
             writer.write("\r\n");   // write new line
             writer.close();
         } catch (IOException e) {
