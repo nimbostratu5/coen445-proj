@@ -23,21 +23,17 @@ public class Server_B {
         System.out.println("Starting Server...");
         //server_B uses a diff port # than server_A but uses the same IP address.
         //TODO: before demo, we need to modify the code to run with distinct IP addresses.
-        DatagramSocket serverSocket = new DatagramSocket(9001);
+        DatagramSocket serverSocket = new DatagramSocket(3000);
         byte[] sendData = new byte[1024];
         byte[] receiveData = new byte[1024];
 
 
-        while(true){
-            DatagramPacket receivePacket = new DatagramPacket(receiveData,receiveData.length);
-            serverSocket.receive((receivePacket));
-            Object[] message = deserialize(receivePacket.getData());
-            System.out.println("Received: "+message[0].toString());
-            String ack = "hello client";
-            sendData = serialize(ack);
-            DatagramPacket sendPacket = new DatagramPacket(sendData,sendData.length,receivePacket.getAddress(),receivePacket.getPort());
-            serverSocket.send(sendPacket);
-        }
+        DatagramPacket receivePacket = new DatagramPacket(receiveData,receiveData.length);
+        serverSocket.receive((receivePacket));
+        Object[] message = deserialize(receivePacket.getData());
+        System.out.println("Received: "+message[0].toString());
+
+        serverSocket.close();
 
     }
 }

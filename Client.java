@@ -24,7 +24,7 @@ public class Client {
 
     public static final String name = "nimbostratus";
     private static int rqNum;
-    public static int client_port = 9000;
+    public static int client_port = 9009;
 
 
     /***********************     DE/SERIALIZATION FUNCTIONS    ***********************/
@@ -97,6 +97,7 @@ public class Client {
                         message[2] = name;
                         message[3] = clientSocket.getInetAddress();
                         message[4] = clientSocket.getPort();
+                        System.out.println("message input complete");
                         break;
 
                     case "DE-REGISTER":
