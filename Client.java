@@ -153,8 +153,8 @@ public class Client {
             }
         }
 
-        // /*  CLOSE SOCKET -- USER LOGOUT -- CLOSE SESSION  */
-        // clientSocket.close();
+        /*  CLOSE SOCKET -- USER LOGOUT -- CLOSE SESSION  */
+        clientSocket.close();
 
     }
 }
