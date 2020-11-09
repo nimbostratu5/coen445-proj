@@ -1,4 +1,6 @@
-import java.io.*;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.ObjectOutputStream;
 import java.net.*;
 import java.util.Scanner;
 //to investigate: import java.util.logging.Logger;
@@ -24,7 +26,7 @@ public class Client {
 
     public static final String name = "nimbostratus";
     private static int rqNum;
-    public static int client_port = 9009;
+    public static int client_port = 9000;
 
 
     /***********************     DE/SERIALIZATION FUNCTIONS    ***********************/
@@ -34,12 +36,6 @@ public class Client {
         ObjectOutputStream os = new ObjectOutputStream(out);
         os.writeObject(obj);
         return out.toByteArray();
-    }
-
-    public static Object[] deserialize(byte[] data) throws IOException, ClassNotFoundException {
-        ByteArrayInputStream in = new ByteArrayInputStream(data);
-        ObjectInputStream is = new ObjectInputStream(in);
-        return (Object[]) is.readObject();
     }
 
 
@@ -52,7 +48,7 @@ public class Client {
         logger.CreateFile();
 
         /*  TODO: NEED FUNCTION TO DETERMINE WHICH SERVER IS CURRENTLY SERVING   */
-        InetAddress currentServer = InetAddress.getByName("localhost"); // USING THIS FOR NOW
+        InetAddress currentServer = InetAddress.getLocalHost(); // USING THIS FOR NOW
         int currentServer_port = 3000; // THIS WILL BE USED AS DEFAULT PORT FOR ALL SERVERS
 
         /*  CLIENT UDP INITIALIZATION  */
@@ -77,27 +73,37 @@ public class Client {
         boolean bye = false;
 
         Scanner sc = new Scanner(System.in);
-        label:
+
         while (!bye) {
             if (sc.hasNextLine()) {
-                messageType = sc.next();
+                messageType = sc.nextLine();
+                
                 switch (messageType) {
 
-                    case "BYE":
+                    case "BYE" :
+                        logger.LogEvent("client closed application");
+                        message = new Object[1];
+                        message[0] = "bye";
                         sc.close();
                         bye = true;
-                        break label;
+                        break;
 
                     case "REGISTER":
+                        message = new Object[5];
+                        message[0] = messageType;
+                        message[1] = rqNum++;
+                        message[2] = name;
+                        message[3] = currentServer.toString();
+                        message[4] = currentServer_port;
+                        break;
 
                     case "UPDATE":
                         message = new Object[5];
                         message[0] = messageType;
                         message[1] = rqNum++;
                         message[2] = name;
-                        message[3] = clientSocket.getInetAddress();
-                        message[4] = clientSocket.getPort();
-                        System.out.println("message input complete");
+                        message[3] = currentServer.toString();
+                        message[4] = currentServer_port;
                         break;
 
                     case "DE-REGISTER":
@@ -129,23 +135,26 @@ public class Client {
                     sendData = serialize(message);
                     DatagramPacket sendPacket  = new DatagramPacket(sendData,sendData.length,currentServer,currentServer_port);
                     clientSocket.send(sendPacket);
-
                     logger.LogEvent("user "+name+" sent a msg of type "+ messageType +" to server");// TODO: 2020-11-08 which server?
 
-                    /*  RECEIVING  */ 
-                    DatagramPacket receivePacket = new DatagramPacket(receiveData,receiveData.length);
-                    clientSocket.receive(receivePacket);
-                    receiveData = receivePacket.getData();
-                    Object[] receiveObj = new Object[0];
-                    
-                    logger.LogEvent("received from server: " + receiveObj[0].toString() );
+                    // /*  RECEIVING  */ 
+                    // DatagramPacket receivePacket = new DatagramPacket(receiveData,receiveData.length);
+                    // clientSocket.receive(receivePacket);
+                    // receiveData = receivePacket.getData();
+                    // Object[] receiveObj = new Object[0];
+                    // logger.LogEvent("received from server: " + receiveObj[0].toString() );
+
+                    /* EXITING */
+                    if (message[0].toString().equalsIgnoreCase("bye")) {
+                        clientSocket.close();
+                        break;
+                    }
                 }
             }
         }
 
         /*  CLOSE SOCKET -- USER LOGOUT -- CLOSE SESSION  */
         clientSocket.close();
-        logger.LogEvent("client closed application.");
 
     }
 }
