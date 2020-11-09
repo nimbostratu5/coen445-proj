@@ -24,16 +24,27 @@ public class Server_B {
         //server_B uses a diff port # than server_A but uses the same IP address.
         //TODO: before demo, we need to modify the code to run with distinct IP addresses.
         DatagramSocket serverSocket = new DatagramSocket(3000);
-        byte[] sendData = new byte[1024];
-        byte[] receiveData = new byte[1024];
+        DatagramPacket serverPacket = null;
+        byte[] receiveData = new byte[65535];
 
 
-        DatagramPacket receivePacket = new DatagramPacket(receiveData,receiveData.length);
-        serverSocket.receive((receivePacket));
-        Object[] message = deserialize(receivePacket.getData());
-        System.out.println("Received: "+message[0].toString());
+        while (true) {
+            serverPacket = new DatagramPacket(receiveData, receiveData.length); //Datagram receiving size
+            serverSocket.receive(serverPacket);    //Receive the data in a buffer
+            
+            Object[] messageList = deserialize(serverPacket.getData());
+            for (int i = 0; i < messageList.length; i++) {
+                System.out.println("Received: " + messageList[i].toString());
+            }
+  
+            if (messageList[0].toString().equalsIgnoreCase("bye")) {   //If data sent says "bye" (to end the program)
+                System.out.println("Client sent bye.....EXITING"); 
+                serverSocket.close();   //Close socket before exiting
+                break; 
+            } 
 
-        serverSocket.close();
-
+            // Clear the buffer after every message. 
+            receiveData = new byte[65535]; 
+        } 
     }
 }
