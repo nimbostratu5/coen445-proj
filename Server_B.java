@@ -1,7 +1,7 @@
 import java.io.*;
 import java.net.*;
 
-public class Server_B {
+public class Test_Server {
 
     boolean active = false;
 
@@ -20,30 +20,27 @@ public class Server_B {
 
     public static void main(String[] args) throws IOException, ClassNotFoundException {
 
-        System.out.println("Starting Server...");
-        //server_B uses a diff port # than server_A but uses the same IP address.
-        //TODO: before demo, we need to modify the code to run with distinct IP addresses.
-        DatagramSocket serverSocket = new DatagramSocket(3000);
+        System.out.print("Starting Server...");
+        DatagramSocket serverSocket = new DatagramSocket(4000);
+        System.out.println(InetAddress.getLocalHost().getHostAddress());
         DatagramPacket serverPacket = null;
         byte[] receiveData = new byte[65535];
 
 
         while (true) {
-            serverPacket = new DatagramPacket(receiveData, receiveData.length); //Datagram receiving size
-            serverSocket.receive(serverPacket);    //Receive the data in a buffer
+            serverPacket = new DatagramPacket(receiveData, receiveData.length); 
+            serverSocket.receive(serverPacket);    
             
-            Object[] messageList = deserialize(serverPacket.getData());
-            for (int i = 0; i < messageList.length; i++) {
-                System.out.println("Received: " + messageList[i].toString());
-            }
-  
-            if (messageList[0].toString().equalsIgnoreCase("bye")) {   //If data sent says "bye" (to end the program)
-                System.out.println("Client sent bye.....EXITING"); 
-                serverSocket.close();   //Close socket before exiting
-                break; 
-            } 
-
-            // Clear the buffer after every message. 
+            Object[] message = deserialize(serverPacket.getData());
+            System.out.println("received: "+message[0].toString()+" from: "+ serverPacket.getSocketAddress().toString());
+            
+            message = new Object[2];
+            message[0] = "ACK";
+            message[1] = "Hello client!";
+            byte[] sendData = serialize(message);
+            
+            DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length,serverPacket.getAddress(),serverPacket.getPort());
+            serverSocket.send(sendPacket);
             receiveData = new byte[65535]; 
         } 
     }
