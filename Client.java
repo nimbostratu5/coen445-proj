@@ -86,7 +86,7 @@ public class Client {
                         message[0] = messageType;
                         message[1] = rqNum++;
                         message[2] = name;
-                        message[3] = "123.456.789.0; //fake ip
+                        message[3] = "123.456.789.0"; //fake ip
                         message[4] = clientSocket.getPort();
                         break;
 
