@@ -1,5 +1,7 @@
 import java.io.*;
 import java.net.*;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Scanner;
 //to investigate: import java.util.logging.Logger;
 
@@ -10,7 +12,7 @@ public class Client {
     /***********************    GLOBAL VARIABLES    ***********************/
 
     public static final String name = "nimbostratus";
-    private static int rqNum;
+    private static int rqNum = 1;
     private static int client_port;
     private static Logger logger = new Logger();
     private static DatagramSocket clientSocket;
@@ -99,7 +101,10 @@ public class Client {
                         message[0] = messageType;
                         message[1] = rqNum++;
                         message[2] = name;
-                        //message[3] = input list of subjects from user using , delimiter
+                        String input = sc.next();
+                        String[] splitter = input.split("\\s+");
+                        ArrayList<String> subjectList = new ArrayList<>(Arrays.asList(splitter));
+                        message[3] = subjectList;
                         break;
 
                     case "PUBLISH":
@@ -107,14 +112,18 @@ public class Client {
                         message[0] = messageType;
                         message[1] = rqNum++;
                         message[2] = name;
-                        //message[3] = subject
-                        //message[4] = text
+                        System.out.print("Subject: ");
+                        message[3] = sc.next();
+                        System.out.println("Input text:");
+                        sc.nextLine();
+                        message[4] = sc.nextLine();
                         break;
 
                     case "LOG":
                         logger.DisplayLog();
 
                 }
+                
                 sendMessage(message);
             }
         }
