@@ -19,133 +19,305 @@ public class Server_A {
         return (Object[]) is.readObject();
     }
 
+    // TODO: Implement database search function for NAME, LIST OF SUBJECTS
+
     public static void main(String[] args) throws IOException, ClassNotFoundException {
 
         System.out.println("Starting Server...");
         //server_A uses a diff port # than server_B but uses the same IP address.
         //TODO: before demo, we need to modify the code to run with distinct IP addresses.
-        DatagramSocket receiveSocket = new DatagramSocket(3000);
-        DatagramPacket receivePacket = null;
-        byte[] receiveData = new byte[65535];
 
+        // For receiving from client
+        DatagramSocket clientSocket = new DatagramSocket(3000);
+        DatagramPacket receiveClientPacket = null;
+        byte[] receiveClientData = new byte[65535];
 
-        DatagramPacket replyPacket = null;
-        byte[] replyData = new byte[65535];
+        // For replying back to client
+        DatagramPacket replyClientPacket = null;
+        byte[] replyDataClient = new byte[65535];
         Object[] messageReplyClient = null;
-        Object[] messageReplyServer = null;
+
+        // // For receiving from server B
+        // DatagramSocket serverSocket = new DatagramSocket(4000);    //TEMPORARY, BUT SERVER_B PORT IS CHANGEABLE
+        // DatagramPacket receiveServerPacket = null;
+        // byte[] receiveServerData = new byte[65535];
+
+        // // For replying back to server B
+        // DatagramPacket replyServerPacket = null;
+        // byte[] replyDataServer = new byte[65535];
+        // Object[] messageReplyServer = null;
 
 
         // TODO: Implement timer duration for while loop, before the loop ends, and then tells the other server to take over
         Boolean serverSwap = false;
+        Boolean serverActive = true;
+        Scanner sc = new Scanner(System.in); // Used to take input to change server IP and Socket while not running
         Timer time = new Timer();
 
 
         while (true) {
-            receivePacket = new DatagramPacket(receiveData, receiveData.length); //Datagram receiving size
-            receiveSocket.receive(receivePacket);    //Receive the data in a buffer
+            //--------------------------------Receiving client packet data----------------------------------
+            receiveClientPacket = new DatagramPacket(receiveClientData, receiveClientData.length); //Datagram receiving size
+            clientSocket.receive(receiveClientPacket);    //Receive the data in a buffer
             
             // Print out message sent to the server
-            Object[] messageList = deserialize(receivePacket.getData());
+            Object[] messageListClient = deserialize(receiveClientPacket.getData());
 
             // Hold message type from the message sent to the server
-            String messageType = messageList[0].toString(); 
+            String messageTypeClient = messageListClient[0].toString(); 
+            //----------------------------------------------------------------------------------------------
 
-            // Server can accept or refuse and reply to client
-            // Message: REGISTER, RQ#, NAME, IP ADDRESS, SOCKET#
-            // To Client Refuse: Name already in use -> REGISTER-DENIED, RQ#, REASON AND make user sleep for a bit
-            // To Client Accept: Name available for use -> REGISTERED, RQ#
 
-            // Server can accept or refuse and reply to other server
-            // To Server Accept: REGISTERED, RQ#, NAME, IP ADDRESS, SOCKET#
-            // To Server Deny: REGISTER-DENIED, RQ#, NAME, IP ADDRESS, SOCKET#
-            if (messageType.equalsIgnoreCase("REGISTER")) {
-                // TODO: if (name exists)
-                // TODO: else
+            // //--------------------------------Receiving server packet data----------------------------------
+            // receiveServerPacket = new DatagramPacket(receiveServerData, receiveServerData.length); //Datagram receiving size
+            // serverSocket.receive(receiveServerPacket);    //Receive the data in a buffer
+            
+            // // Print out message sent to the server
+            // Object[] messageListServer = deserialize(receiveServerPacket.getData());
+
+            // // Hold message type from the message sent to the server
+            // String messageTypeServer = messageListServer[0].toString(); 
+            // //----------------------------------------------------------------------------------------------
+
+
+            // TODO: Implement timer to set serverActive to true or false based on time and serverSwap to true
+            // If server is inactive, allow to input UPDATE-SERVER and then input comma delimited IP and Socket
+            if (serverActive.equals(false)) {
+                /*
+                String ipSocketChange = sc.nextLine();
+
+                else if (ipSocketChange.equalsIgnoreCase("UPDATE-SERVER")) {
+                    String ipSocket = sc.next();
+                    String[] splitter = input.split("\\s+");
+                    ArrayList<String> subjectList = new ArrayList<>(Arrays.asList(splitter));
+
+                    messageReplyServer = new Object[3];
+                    messageReplyServer[0] = "UPDATE-SERVER";
+                    messageReplyServer[1] = InetAddress.getByName(subjectList.get(0).toString());
+                    messageReplyServer[2] = subjectList.get(1).toString();
+                }
+                */
+            }
+
+
+            // Add user to server 
+            if (messageTypeClient.equalsIgnoreCase("REGISTER") && serverActive.equals(true)) {
+                // TODO: if (name doesnt exist)
                 messageReplyClient = new Object[2];
                 messageReplyClient[0] = "REGISTERED";
-                messageReplyClient[1] = messageList[1].toString();
+                messageReplyClient[1] = messageListClient[1].toString();
 
-                for (int i = 0; i < messageList.length; i++) {
-                    System.out.println("Received: " + messageList[i].toString());
+                // Print out contents from client's message
+                for (int i = 0; i < messageListClient.length; i++) {
+                    System.out.println("Received: " + messageListClient[i].toString());
                 }
+                System.out.println("Message Received From: " + receiveClientPacket.getSocketAddress().toString());
+
+                /*
+                messageReplyServer = new Object[5];
+                messageReplyServer[0] = "REGISTERED";
+                messageReplyServer[1] = messageListClient[1].toString(); // RQ#
+                messageReplyServer[2] = messageListClient[2].toString(); // Name
+                messageReplyServer[3] = messageListClient[3].toString(); // IP ADDRESS
+                messageReplyServer[4] = messageListClient[4].toString(); // SOCKET#
+                */
+
+                /*
+                // TODO: else
+                messageReplyClient = new Object[3];
+                messageReplyClient[0] = "REGISTER-DENIED";
+                messageReplyClient[1] = messageListClient[1].toString();
+                messageReplyClient[2] = "Name already in use.";
+
+                
+                messageReplyServer = new Object[5];
+                messageReplyServer[0] = "REGISTER-DENIED";
+                messageReplyServer[1] = messageListClient[1].toString(); // RQ#
+                messageReplyServer[2] = messageListClient[2].toString(); // Name
+                messageReplyServer[3] = messageListClient[3].toString(); // IP ADDRESS
+                messageReplyServer[4] = messageListClient[4].toString(); // SOCKET#
+                */
             }
 
-            // Server can accept or refuse and reply to server only 
-            // Message: DE-REGISTER, RQ#, NAME
+            /*
+            else if (messageTypeServer.equalsIgnoreCase("REGISTERED") && serverActive.equals(false)) {
 
-            // To Server Accept: Name Exists -> DE-REGISTER, NAME   
-            // To Server Refuse: Name Doesn't Exists -> Do nothing
-            // TODO: Create ability for server's to send to one another
-            // TODO: Server must be able to read this message type as well and reply    
-            else if (messageType.equalsIgnoreCase("DE-REGISTER")) {
+            }
+            */
+
+            /*
+            else if (messageTypeServer.equalsIgnoreCase("REGISTER-DENIED") && serverActive.equals(false)) {
+
+            }
+            */
+
+            // Remove user from server    
+            else if (messageTypeClient.equalsIgnoreCase("DE-REGISTER") && serverActive.equals(true)) {
+                /*
+                //If name exists
+                messageReplyServer = new Object[2];
+                messageReplyServer[0] = "DE-REGISTER";
+                messageReplyServer[1] = messageListClient[2].toString();
+                OPTIONAL: Say to client that it was removed
+
+                //If name doesn't exist
+                Do nothing
+                OPTIONAL: Say to client that it doesn't exist
+                */
 
             }
 
-            // Server can accept or refuse and reply to client
-            // Message: UPDATE, RQ#, NAME, IP ADDRESS, SOCKET#
-            // To Client Accept: Name exists -> UPDATE-CONFIRMED, RQ#, NAME, IP ADDRESS, SOCKET#
-            // To Client Refuse: Name already in use -> UPDATE-DENIED, RQ#, REASON
-
-            // Server can accept or refuse and reply to other server
-            // To Server Accept: UPDATE-CONFIRMED, RQ#, NAME, IP ADDRESS, SOCKET#
-            // To Server Deny: Nothing
-            else if (messageType.equalsIgnoreCase("UPDATE")) {
+            /*
+            else if (messageTypeServer.equalsIgnoreCase("DE-REGISTER") && serverActive.equals(false)) {
 
             }
+            */
+
+            // Update user's IP Address and Socket#
+            else if (messageTypeClient.equalsIgnoreCase("UPDATE") && serverActive.equals(true)) {
+                //if (name exists)
+                messageReplyClient = new Object[5];
+                messageReplyClient[0] = "UPDATE-CONFIRMED";
+                messageReplyClient[1] = messageListClient[1].toString();
+                messageReplyClient[2] = messageListClient[2].toString();
+                messageReplyClient[3] = messageListClient[3].toString();
+                messageReplyClient[4] = messageListClient[4].toString();
+
+                /*
+                messageReplyServer = new Object[5];
+                messageReplyServer[0] = "UPDATE-CONFIRMED";
+                messageReplyServer[1] = messageListClient[1].toString();
+                messageReplyServer[2] = messageListClient[2].toString();
+                messageReplyServer[3] = messageListClient[3].toString();
+                messageReplyServer[4] = messageListClient[4].toString();
+
+
+                //if (name doesn't exist)
+                messageReplyClient = new Object[3];
+                messageReplyClient[0] = "UPDATE-DENIED";
+                messageReplyClient[1] = messageListClient[1].toString();
+                messageReplyClient[2] = "Name does not exist.";
+                */
+
+            }
+
+            /*
+            else if (messageTypeServer.equalsIgnoreCase("UPDATE-CONFIRMED") && serverActive.equals(false)) {
+
+            }
+            */
+
+            // Add subjects of interest to user
+            else if (messageTypeClient.equalsIgnoreCase("SUBJECTS") && serverActive.equals(true)) {
+                //if (if name exists && subject is from COEN)
+                messageReplyClient = new Object[4];
+                messageReplyClient[0] = "SUBJECTS-UPDATED";
+                messageReplyClient[1] = messageListClient[1].toString();
+                messageReplyClient[2] = messageListClient[2].toString();
+                messageReplyClient[3] = messageListClient[3].toString();
+
+                /*
+                messageReplyServer = new Object[4];
+                messageReplyServer[0] = "SUBJECTS-CONFIRMED";
+                messageReplyServer[1] = messageListClient[1].toString();
+                messageReplyServer[2] = messageListClient[2].toString();
+                messageReplyServer[3] = messageListClient[3].toString();
+
+                // (if name doesn't exist || subject is NOT COEN)
+                messageReplyClient = new Object[4];
+                messageReplyClient[0] = "SUBJECTS-REJECTED";
+                messageReplyClient[1] = messageListClient[1].toString();
+                messageReplyClient[2] = messageListClient[2].toString();
+                messageReplyClient[3] = messageListClient[3].toString();
+                */
+            }
+
+            // Send message to users with subject of interest
+            else if (messageTypeClient.equalsIgnoreCase("PUBLISH") && serverActive.equals(true)) {
+                /*
+                // if (name exists && user.subject exists)
+                // for (users with subject, do this for all)
+                currentServer = InetAddress.getByName("NAME.IP");
+                messageReplyClient = new Object[4];
+                messageReplyClient[0] = "MESSAGE";
+                messageReplyClient[1] = messageListClient[2].toString();
+                messageReplyClient[2] = messageListClient[3].toString();
+                messageReplyClient[3] = messageListClient[4].toString();
+
+                // if (name doesn't exist && subject doesn't exist)
+                messageReplyClient = new Object[3];
+                messageReplyClient[0] = "PUBLISH-DENIED";
+                messageReplyClient[1] = messageListClient[1].toString();
+                messageReplyClient[2] = "Name does not exist.";
+                */
+            }
+
+            
             
 
-            // Server can accept or refuse and reply to client
-            // Message: SUBJECTS, RQ#, NAME, LIST OF SUBJECTS
-            // To Client Accept: Name exists -> SUBJECTS-UPDATED, RQ#, NAME, LIST OF SUBJECTS
-            // To Client Refuse: Name doesn't exist OR subject list error -> SUBJECTS-REJECTED, RQ#, NAME, LIST OF SUBJECTS
-
-            // Server can accept or refuse and reply to other server
-            // To Server Accept: SUBJECTS-UPDATED, RQ#, NAME, LIST OF SUBJECTS
-            // To Server Deny: Nothing
-            else if (messageType.equalsIgnoreCase("SUBJECTS")) {
-
-            }
-
-            // Message: PUBLISH, RQ#, NAME, SUBJECT, TEXT
-            // To Client Accept: If name exists -> MESSAGE, NAME, SUBJECT, TEXT
-            // To Client Deny: If name DOESNT exists -> PUBLISH-DENIED, RQ#, REASON
-
-            else if (messageType.equalsIgnoreCase("PUBLISH")) {
-
-            }
-
-            // If server needs to swap to other server
-            // To ALL REGISTERED Client: CHANGE-SERVER, IP ADDRESS, SOCKET# (change to the ip + socket for other server)
-            // To server: When NOT running, it can change ip and socket: -> UPDATE-SERVER, IP ADDRESS, Socket#
+            // Swaps servers
             else if (serverSwap.equals(true)) {
                 serverSwap = false;
+                serverActive = false;
+
+                /*
+                for (all users in db)
+                messageReplyClient = new Object[3];
+                messageReplyClient[0] = "CHANGE-SERVER";
+                messageReplyClient[1] = user.IP;
+                messageReplyClient[2] = user.socket;
+                replyDataClient = serialize(messageReplyClient);
+                replyClientPacket = new DatagramPacket(replyDataClient, replyDataClient.length, user.ip, user.socket);
+                clientSocket.send(replyClientPacket);
+                */
                 break;
             }
 
-            // Response as INCORRECT MESSAGE TYPE
+            // Response for invalid message
             else {
-
+                messageReplyClient = new Object[3];
+                messageReplyClient[0] = "INVALID-MESSAGE";
+                messageReplyClient[1] = messageListClient[1].toString();
+                messageReplyClient[2] = "Invalid message has been sent.";
             }
 
+
+
+
+
+
+
+
+
+
+
+
+            //TODO: Make BELOW a function
+
+            // Send message to client
             if (messageReplyClient != null) {
-
                 // TODO: Fix this so it also works to send to other SERVER and not only CLIENT! 
-
                 //---------------------------------Send to client---------------------------------
-                replyData = serialize(messageReplyClient);
-                replyPacket = new DatagramPacket(replyData, replyData.length, receivePacket.getAddress(), receivePacket.getPort());
-                receiveSocket.send(replyPacket);
+                replyDataClient = serialize(messageReplyClient);
+                replyClientPacket = new DatagramPacket(replyDataClient, replyDataClient.length, receiveClientPacket.getSocketAddress());
+                clientSocket.send(replyClientPacket);
                 //--------------------------------------------------------------------------------
             }
-  
-            if (messageList[0].toString().equalsIgnoreCase("bye")) {   //If data sent says "bye" (to end the program)
-                System.out.println("Client sent bye.....EXITING"); 
-                receiveSocket.close();   //Close socket before exiting
-                break; 
-            } 
+
+            // // Send message to server B
+            // if (messageReplyServer != null) {
+            //     //---------------------------------Send to ServerB---------------------------------
+            //     replyDataServer = serialize(messageReplyServer);
+            //     replyServerPacket = new DatagramPacket(replyDataServer, replyDataServer.length, receiveServerPacket.getSocketAddress());
+            //     serverSocket.send(replyServerPacket);
+            //     //--------------------------------------------------------------------------------
+            // }
 
             // Clear the buffer after every message. 
-            receiveData = new byte[65535]; 
+            receiveClientData = new byte[65535];
+            replyDataClient = new byte[65535];
+            // receiveServerData = new byte[65535];
+            // replyDataServer = new byte[65535]; 
         }
         
         
