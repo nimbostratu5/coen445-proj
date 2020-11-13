@@ -28,7 +28,7 @@ public class Server_A {
         //TODO: before demo, we need to modify the code to run with distinct IP addresses.
 
         // For receiving from client
-        DatagramSocket clientSocket = new DatagramSocket(3000);
+        DatagramSocket serverASocket = new DatagramSocket(3000);
         DatagramPacket receiveClientPacket = null;
         byte[] receiveClientData = new byte[65535];
 
@@ -37,15 +37,16 @@ public class Server_A {
         byte[] replyDataClient = new byte[65535];
         Object[] messageReplyClient = null;
 
-        // // For receiving from server B
-        // DatagramSocket serverSocket = new DatagramSocket(4000);    //TEMPORARY, BUT SERVER_B PORT IS CHANGEABLE
-        // DatagramPacket receiveServerPacket = null;
-        // byte[] receiveServerData = new byte[65535];
+        // For receiving from server B
+        DatagramPacket receiveServerPacket = null;
+        byte[] receiveServerData = new byte[65535];
+        int serverB_port = 4001;      //TEMPORARY TO HOLD PORT FOR OTHER SERVER
+        InetAddress serverB_Address = InetAddress.getLocalHost();
 
-        // // For replying back to server B
-        // DatagramPacket replyServerPacket = null;
-        // byte[] replyDataServer = new byte[65535];
-        // Object[] messageReplyServer = null;
+        // For replying back to server B
+        DatagramPacket replyServerPacket = null;
+        byte[] replyDataServer = new byte[65535];
+        Object[] messageReplyServer = null;
 
 
         // TODO: Implement timer duration for while loop, before the loop ends, and then tells the other server to take over
@@ -55,10 +56,21 @@ public class Server_A {
         Timer time = new Timer();
 
 
+
+
+
+
+
+
+
+
+
+
+
         while (true) {
             //--------------------------------Receiving client packet data----------------------------------
             receiveClientPacket = new DatagramPacket(receiveClientData, receiveClientData.length); //Datagram receiving size
-            clientSocket.receive(receiveClientPacket);    //Receive the data in a buffer
+            serverASocket.receive(receiveClientPacket);    //Receive the data in a buffer
             
             // Print out message sent to the server
             Object[] messageListClient = deserialize(receiveClientPacket.getData());
@@ -68,9 +80,10 @@ public class Server_A {
             //----------------------------------------------------------------------------------------------
 
 
+            // TODO: Fix this so that server A ACTUALLY receives the client message (when this is uncommented, the server doesn't manage to get the message) 
             // //--------------------------------Receiving server packet data----------------------------------
             // receiveServerPacket = new DatagramPacket(receiveServerData, receiveServerData.length); //Datagram receiving size
-            // serverSocket.receive(receiveServerPacket);    //Receive the data in a buffer
+            // serverASocket.receive(receiveServerPacket);    //Receive the data in a buffer
             
             // // Print out message sent to the server
             // Object[] messageListServer = deserialize(receiveServerPacket.getData());
@@ -113,14 +126,14 @@ public class Server_A {
                 }
                 System.out.println("Message Received From: " + receiveClientPacket.getSocketAddress().toString());
 
-                /*
+                
                 messageReplyServer = new Object[5];
                 messageReplyServer[0] = "REGISTERED";
                 messageReplyServer[1] = messageListClient[1].toString(); // RQ#
                 messageReplyServer[2] = messageListClient[2].toString(); // Name
                 messageReplyServer[3] = messageListClient[3].toString(); // IP ADDRESS
                 messageReplyServer[4] = messageListClient[4].toString(); // SOCKET#
-                */
+                
 
                 /*
                 // TODO: else
@@ -139,11 +152,17 @@ public class Server_A {
                 */
             }
 
+            //TODO: Fix this so that server B can receive the REGISTERED
             /*
             else if (messageTypeServer.equalsIgnoreCase("REGISTERED") && serverActive.equals(false)) {
 
+                // Print out contents from server's message
+                for (int i = 0; i < messageListServer.length; i++) {
+                    System.out.println("Received: " + messageListServer[i].toString());
+                }
             }
             */
+            
 
             /*
             else if (messageTypeServer.equalsIgnoreCase("REGISTER-DENIED") && serverActive.equals(false)) {
@@ -268,7 +287,7 @@ public class Server_A {
                 messageReplyClient[2] = user.socket;
                 replyDataClient = serialize(messageReplyClient);
                 replyClientPacket = new DatagramPacket(replyDataClient, replyDataClient.length, user.ip, user.socket);
-                clientSocket.send(replyClientPacket);
+                serverASocket.send(replyClientPacket);
                 */
                 break;
             }
@@ -293,6 +312,7 @@ public class Server_A {
 
 
             //TODO: Make BELOW a function
+            //TODO: Fix this so that we can send a packet from the current server socket to both serverB and client
 
             // Send message to client
             if (messageReplyClient != null) {
@@ -300,18 +320,18 @@ public class Server_A {
                 //---------------------------------Send to client---------------------------------
                 replyDataClient = serialize(messageReplyClient);
                 replyClientPacket = new DatagramPacket(replyDataClient, replyDataClient.length, receiveClientPacket.getSocketAddress());
-                clientSocket.send(replyClientPacket);
+                serverASocket.send(replyClientPacket);
                 //--------------------------------------------------------------------------------
             }
 
-            // // Send message to server B
-            // if (messageReplyServer != null) {
-            //     //---------------------------------Send to ServerB---------------------------------
-            //     replyDataServer = serialize(messageReplyServer);
-            //     replyServerPacket = new DatagramPacket(replyDataServer, replyDataServer.length, receiveServerPacket.getSocketAddress());
-            //     serverSocket.send(replyServerPacket);
-            //     //--------------------------------------------------------------------------------
-            // }
+            // Send message to server B
+            if (messageReplyServer != null) {
+                //---------------------------------Send to ServerB---------------------------------
+                replyDataServer = serialize(messageReplyServer);
+                replyServerPacket = new DatagramPacket(replyDataServer, replyDataServer.length, serverB_Address, serverB_port);
+                serverASocket.send(replyServerPacket);
+                //--------------------------------------------------------------------------------
+            }
 
             // Clear the buffer after every message. 
             receiveClientData = new byte[65535];
@@ -320,6 +340,6 @@ public class Server_A {
             // replyDataServer = new byte[65535]; 
         }
         
-        
+        serverASocket.close();
     }
 }
