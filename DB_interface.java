@@ -6,7 +6,7 @@ import java.util.Date;
 
 public class DB_interface{
 	
-//	Parameters required to authenticate to the database: This is a very silly and fast way of doing it.
+	// Parameters required to authenticate to the database: This is a very silly and fast way of doing it.
 	private final String HOSTNAME="database-1.cgsj5cw6pwbs.ca-central-1.rds.amazonaws.com";
 	private final int PORT=3306;
 	private final String dbName = "COEN445";
@@ -14,7 +14,7 @@ public class DB_interface{
 	
 	private Connection connection;
 	
-//	Connect to the DB
+	// Connect to the DB
 	public void connect() throws SQLException{
 		String jdbcUrl = "jdbc:mysql://" + HOSTNAME + ":" + PORT + "/" + dbName + "?user=" + CREDENTIALS[0] + "&password=" + CREDENTIALS[1];
 		connection = DriverManager.getConnection(jdbcUrl);
@@ -24,7 +24,7 @@ public class DB_interface{
 		}
 	}
 	
-//	Disconnect from the DB
+	// Disconnect from the DB
 	public void disconnect() throws SQLException {
 		connection.close();
 		connection = null;
@@ -39,8 +39,9 @@ public class DB_interface{
     		String creating_new_table = String.format("CREATE TABLE %s_subjects(id INT UNSIGNED NOT NULL, last_viewed DATETIME NULL)", user);
     		
     		Statement statement = connection.createStatement();
+       		statement.executeUpdate(creating_new_table);
     		statement.executeUpdate(adding_new_user);
-    		statement.executeUpdate(creating_new_table);
+
     		
     		connection.commit();
     		
@@ -153,6 +154,7 @@ public class DB_interface{
 //		once finished iterating drop user's subject table
     	String remove_user = String.format("DELETE FROM users WHERE name = \'%s\' LIMIT 1",user);
     	String decrement_user_count = String.format("UPDATE subjects SET usercount = (usercount - 1) WHERE id IN (SELECT id FROM %s_subjects)",user);
+    	String get_all_registered_subjects = String.format("SELECT id FROM %s_subjects", user);
     	String delete_subjects = String.format("DROP TABLE %s_subjects", user);
     	
     	try {
@@ -162,6 +164,23 @@ public class DB_interface{
 	    	
 	    	statement.execute(remove_user);
 	    	statement.executeLargeUpdate(decrement_user_count);
+	    	
+	    	ResultSet result = statement.executeQuery(get_all_registered_subjects);
+	    	StringBuilder subject_tables = new StringBuilder();
+	    	
+	    	while(result.next()) {
+	    		subject_tables.append("subject_"+result.getInt("id")+"_subs, ");
+	    	}
+	    	
+	    	subject_tables.deleteCharAt(subject_tables.length()-1);
+	    	subject_tables.deleteCharAt(subject_tables.length()-1);
+	    	
+	    	String set_match = subject_tables.toString().replace("_subs", "_subs.user = \'"+user+"\'");
+	    	
+	    	String total_update = "DELETE FROM "+subject_tables.toString()+" WHERE "+set_match+" LIMIT 1";
+	    	System.out.println(total_update);
+	    	
+	    	statement.executeLargeUpdate(total_update);
 	    	statement.execute(delete_subjects);
 	    	
 	    	connection.commit();
@@ -221,7 +240,7 @@ public class DB_interface{
 	    	ResultSet result = statement.executeQuery(query);
 	    	subjects = new ArrayList<String[]>();
 	    	while(result.next()) {
-	    		subjects.add(new String[] {""+result.getInt("id"),result.getString("subject"),""+result.getInt("usercount")});
+	    		subjects.add(new String[] {""+result.getInt("id"),result.getString("subject"),""+result.getInt("usercount"),result.getString("last_post")});
 	    	}
 	    	connection.commit();
 		} catch (SQLException e) {
@@ -236,7 +255,7 @@ public class DB_interface{
 		return subjects;
     }
     
-    // Register user to a new subject
+    // Register user to a new or existing subject with name only provided
     public void registerToSubject(String user, String subject) {
 
     	String existance_test = String.format("SELECT id FROM subjects WHERE subject = \'%s\'",subject);
@@ -269,6 +288,9 @@ public class DB_interface{
 	    			last_viewed_default = formatDateTimeForDatabase(new Date(0l));
 	    		}
 	    		
+	    		String subs_update = String.format("INSERT INTO subject_%d_subs VALUE('%s')", subject_id, user);
+	    		statement.executeUpdate(subs_update);
+	    		
 				String update_user_table = String.format("INSERT INTO %s_subjects VALUE(%d,\'%s\')",user,subject_id,last_viewed_default);
 				statement.executeUpdate(update_user_table);
 				
@@ -278,7 +300,8 @@ public class DB_interface{
 	    	// Otherwise create a new subject row
 	    	//    	add new row to subjects with count 1
 	    	//		get the ID for the subject
-	    	// 		create new subject table 
+	    	// 		create new subject table and subject_subs table
+	    	//		add the user to the subject_subs table
 	    	//    	add the subject id to the user subjects table
 	    	else {
 	    		statement.executeUpdate(new_row_insertion);
@@ -290,10 +313,60 @@ public class DB_interface{
 	    		String creating_new_table = String.format("CREATE TABLE subject_%d (number BIGINT AUTO_INCREMENT KEY NOT NULL,user VARCHAR(30) NOT NULL, message VARCHAR(150) NOT NULL,time_sent DATETIME NOT NULL, address VARCHAR(30) NOT NULL)", subject_id);
 	    		statement.executeUpdate(creating_new_table);
 	    		
+	    		String creating_new_subs_table = String.format("CREATE TABLE subject_%d_subs (user VARCHAR(30) NOT NULL)", subject_id);
+	    		statement.executeUpdate(creating_new_subs_table);
+	    		
+	    		String subs_update = String.format("INSERT INTO subject_%d_subs VALUE('%s')", subject_id, user);
+	    		statement.executeUpdate(subs_update);
+	    		
 				String update_user_table = String.format("INSERT INTO %s_subjects VALUE(%d,\'%s\')",user,subject_id,formatDateTimeForDatabase(new Date()));
 				statement.executeUpdate(update_user_table);
 	    	}
 	    	
+			
+	    	connection.commit();
+	    	
+			System.out.println("Successfully registered new subject!");
+		} catch (SQLException e) {
+			try {
+				connection.rollback();
+			} catch (SQLException e1) {
+				e1.printStackTrace();
+			}
+			e.printStackTrace();
+		}
+    }
+	
+    // Register user to an existing new subject
+    public void registerToSubject(String user, int subject_id) {
+
+    	String count_increment = String.format("UPDATE subjects SET usercount = (usercount + 1) WHERE id = %d",subject_id);
+
+		try {
+			
+			connection.setAutoCommit(false);
+	    	Statement statement = connection.createStatement();
+
+    		statement.executeUpdate(count_increment);
+    		
+    		String last_viewed_default;
+    		
+			// if checking if was ever registered to it before setting default last_viewed time
+    		String fetch_past_visit = String.format("SELECT time_sent FROM subject_%d WHERE user = \'%s\'",subject_id,user);
+    		ResultSet past_time = statement.executeQuery(fetch_past_visit);
+    		if (past_time.next()) {
+    			last_viewed_default = past_time.getString("time_sent");
+    		} else {
+    			last_viewed_default = formatDateTimeForDatabase(new Date(0l));
+    		}
+    		
+    		String subs_update = String.format("INSERT INTO subject_%d_subs VALUE('%s')", subject_id, user);
+    		statement.executeUpdate(subs_update);
+    		
+			String update_user_table = String.format("INSERT INTO %s_subjects VALUE(%d,\'%s\')",user,subject_id,last_viewed_default);
+			statement.executeUpdate(update_user_table);
+				
+			
 			
 	    	connection.commit();
 	    	
@@ -315,13 +388,14 @@ public class DB_interface{
 		//  delete row from user's subjects
 		String decrement_subject = String.format("UPDATE subjects SET usercount = (usercount-1) WHERE id = %d", subject_id);
 		String remove_from_list = String.format("DELETE FROM %s_subjects WHERE id = %d LIMIT 1",user,subject_id);
-		
+		String remove_from_subs = String.format("DELETE FROM subject_%d_subs WHERE user = \'%s\' LIMIT 1",subject_id,user);
 		try {
 			connection.setAutoCommit(false);
 			
 	    	Statement statement = connection.createStatement();
 	    	
 	    	statement.executeUpdate(decrement_subject);
+	    	statement.executeUpdate(remove_from_subs);
 	    	statement.executeUpdate(remove_from_list);
 	    	
 	    	connection.commit();
@@ -445,6 +519,81 @@ public class DB_interface{
 		return results;
 	}
 	
+	// Fetch last N messages defined by the limit, starting from the lastReceived message id.
+	// If lastReceived is -1, fetches the latest messages from the subject
+	public ArrayList<String[]> fetchMessages(String user,int lastReceived, int limit, int subject_id){
+		
+		ArrayList<String[]> messages = null;
+		
+		String fetch_messages = (lastReceived == -1) ? 
+				String.format("SELECT * FROM (SELECT * FROM subject_%d ORDER BY number DESC LIMIT %d) temp ORDER BY number ASC",subject_id,limit) : 
+					String.format("SELECT * FROM (SELECT * FROM subject_%d WHERE number < %d ORDER BY number DESC LIMIT %d) temp ORDER BY number ASC",subject_id,lastReceived,limit);
+		
+		try {
+			connection.setAutoCommit(false);
+			
+	    	Statement statement = connection.createStatement();
+	    	
+	    	// Fetch messages from the subject
+	    	ResultSet result = statement.executeQuery(fetch_messages);
+	    	messages = new ArrayList<String[]>();
+	    	while (result.next()) {
+	    		messages.add(new String[] {""+result.getInt("number"),result.getString("user"),result.getString("message"),result.getString("time_sent"),result.getString("address")});
+	    	}
+	
+	    	// Update user's last viewed timestamp if they are registered to the subject
+    		String most_recent_message_time = messages.get(0)[3];
+    		
+    		String update_users_last_viewed_time = String.format("UPDATE %s_subjects SET last_viewed = \'%s\' WHERE id = %d AND last_viewed < '%s' LIMIT 1",user,most_recent_message_time,subject_id,most_recent_message_time);
+    		statement.executeUpdate(update_users_last_viewed_time);
+	    	
+	    	
+	    	connection.commit();
+	    	
+		} catch (SQLException e) {
+			try {
+				connection.rollback();
+			} catch (SQLException e1) {
+				e1.printStackTrace();
+			}
+			e.printStackTrace();
+		}		
+				
+		return messages;
+	}
+	
+	// Fetch all users subscribed to a subject
+	public ArrayList<String[]> getAllUsersSubscribed(int subject_id){
+		
+		String query = String.format("SELECT name,address FROM users WHERE name IN (SELECT * FROM subject_%d_subs)",subject_id);
+		ArrayList<String[]> users = null;
+		
+		try {
+			connection.setAutoCommit(false);
+			
+	    	Statement statement = connection.createStatement();
+	    	ResultSet result = statement.executeQuery(query);
+	    	
+	    	users = new ArrayList<String[]>();
+	    	while (result.next()) {
+	    		users.add(new String[] {result.getString("name"),result.getString("address")});
+	    	}
+	
+	    	
+	    	connection.commit();
+		} catch (SQLException e) {
+			try {
+				connection.rollback();
+			} catch (SQLException e1) {
+				e1.printStackTrace();
+			}
+			e.printStackTrace();
+		}
+		
+		return users;
+	}
+
+	// Transform Date object to Database-friendly DATETIME string
 	public static String formatDateTimeForDatabase(Date date) {
 		SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 		return sdf.format(date);

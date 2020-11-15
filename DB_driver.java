@@ -13,11 +13,8 @@ public class DB_driver{
         
         try {
 			db_int.connect();
-//			db_int.sendMessage("bob", 135, "Hello", "127.0.0.1");
-//	        db_int.sendMessage("ted", 135, "Extremely fast", "127.0.0.2");
-//	        db_int.sendMessage("bob", 135, "What is?", "127.0.0.1");
-			
-//			ArrayList<String[]> users =db_int.fetchUnviewedMessages("bob",131,10);
+//			db_int.createNewUserAccount("bob", "127.0.0.1:9000");
+//			ArrayList<String[]> users = db_int.getAllUsersSubscribed(131);
 //	        for (String [] item : users) 
 //	        { 
 //	        	for(String val: item) {
@@ -26,6 +23,7 @@ public class DB_driver{
 //	        	System.out.println();
 //	        }
 //			db_int.unregisterSubject("bob", 131);
+
 //			db_int.registerToSubject("bob", "MC and cheese");
 			
 			db_int.disconnect();
