@@ -1,11 +1,24 @@
 # coen445-proj
 
-# How To Run
+# How To Run Client and Server
 1. Compile client and servers with 'javac Client.java Server_A.java Server_B.java'
 2. Run Server_B (Server_A not updated before Server_B) with 'java Server_B' in one terminal
 3. Run Client with 'java Client' in another terminal
 4. Send message type 'REGISTER', 'UPDATE', etc. by typing it in the Client's terminal
 5. Exit program by typing 'BYE' in Client's terminal
+
+# How to setup and Run DB
+1. From SQLWorkbench, press + symbol to add a server for "MySQL Connections"
+2. Under host, add database-1.cgsj5cw6pwbs.ca-central-1.rds.amazonaws.com
+2. Under username, add admin
+3. Under password "store in vault/keychain", add COEN4452020
+4. Change connection name to your liking
+5. Expand COEN445 to display the tables
+6. Before issueing a query from SQL, make sure to write and run (electricity symbol): USE COEN445
+7. After running this SQL query, remove USE COEN445, and perform any other query (SELECT, INSERT, DROP, etc.)
+8. To run in program, add .jar to program classpath 
+9. Connect to the DB from the program
+10. Use methods from  DB_interface.java
 
 # JDBC setup
 Before being able to run any Database operations you must include the JDBC client jar (system independent) in your build/project path.
