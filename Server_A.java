@@ -1,6 +1,7 @@
 import java.io.*;
 import java.net.*;
 import java.util.*;
+import java.sql.*;
 
 public class Server_A {
 
@@ -10,6 +11,9 @@ public class Server_A {
     // For receiving from server B
     private static InetAddress serverB_Address; 
     private static int serverB_port;
+
+    // For database
+    private static DB_interface db_int;
 
     //TODO: before demo, we need to modify the code to run with distinct IP addresses.
     static {
@@ -59,6 +63,23 @@ public class Server_A {
         }
     }
 
+    // Start DB make sure to compile with: javac -cp <path/.jar file>: Server_A.java
+    // Run DB with: java -cp <path/.jar file>: Server_A
+    public static void startDB() {
+        db_int = new DB_interface();
+        try {
+            db_int.connect();
+
+            System.out.println("SQL DB is connected.");
+            while (true) {
+                // TODO: Insert code within here while DB is active
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
     // TODO: Implement database search function for NAME, LIST OF SUBJECTS
 
     public static void main(String[] args) throws IOException, ClassNotFoundException {
@@ -81,6 +102,9 @@ public class Server_A {
         Boolean serverActive = true;    //@@@@@@@@@@@@@@@@@@@@@@@@@CHANGE TO FALSE WHEN COPIED TO SERVER_B
         Scanner sc = new Scanner(System.in);
         // Timer time = new Timer();
+
+
+        //startDB(); //Start DB make sure to compile with -cp <.jar file> and run with java -cp <.jar file>
 
 
         while (true) {
@@ -182,9 +206,13 @@ public class Server_A {
                     messageReplyClient[2] = messageListClient[2].toString();
                     messageReplyClient[3] = subjectList;
 
+                    String stringList = "";
+                    System.out.println("Number of subjects: " + subjectList.size());
                     for (String subject : subjectList) {
                         System.out.println("Subject: " + subject);
+                        stringList += subject + ","; 
                     }
+                    System.out.println("Subject List: " + stringList.substring(0, stringList.length() - 1));
 
                     /*
                     // (if name doesn't exist || subject is NOT COEN)
@@ -192,7 +220,7 @@ public class Server_A {
                     messageReplyClient[0] = "SUBJECTS-REJECTED";
                     messageReplyClient[1] = messageListClient[1].toString();
                     messageReplyClient[2] = messageListClient[2].toString();
-                    messageReplyClient[3] = messageListClient[3].toString();
+                    messageReplyClient[3] = subjectList;
                     */
                     sendServerFlag = true;  //Send to server
                 }
@@ -270,12 +298,12 @@ public class Server_A {
                 else if (messageTypeReceived.equalsIgnoreCase("SUBJECTS-UPDATED")) {
                     ArrayList<String> subjectList = new ArrayList<>((ArrayList<String>) messageListClient[3]);
 
-                    StringBuilder sb = new StringBuilder();
+                    String stringList = "";
                     for (String subject : subjectList) {
-                        sb.append(subject + " ");
+                        stringList += subject + ","; 
                     }
 
-                    System.out.println("User <" + messageListClient[2].toString() + "> updated subjects: " + sb.toString());
+                    System.out.println("User <" + messageListClient[2].toString() + "> updated " + subjectList.size() + " subjects: " + stringList.substring(0, stringList.length() - 1));
                 }
 
                 // Receive server updated IP and socket
@@ -354,7 +382,8 @@ public class Server_A {
                     messageReplyServer[0] = "SUBJECTS-UPDATED";
                     messageReplyServer[1] = messageListClient[1].toString();
                     messageReplyServer[2] = messageListClient[2].toString();
-                    messageReplyServer[3] = messageListClient[3].toString();
+                    ArrayList<String> subjectList = new ArrayList<>((ArrayList<String>) messageListClient[3]);
+                    messageReplyServer[3] = subjectList;
                 }
 
                 else if (messageTypeReceived.equalsIgnoreCase("CHANGE-SERVER")) {
