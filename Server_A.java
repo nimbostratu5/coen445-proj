@@ -64,6 +64,21 @@ public class Server_A {
         }
     }
 
+    // Return subjects if they are from COEN
+    public static ArrayList<String> areSubject(ArrayList<String> clientSubjectList) {
+        // Create an array of subjects which only accept COEN subjects
+        ArrayList<String> acceptedSubjectList = new ArrayList<>();
+        for (int i = 0; i < clientSubjectList.size(); i++) {
+            String subject = clientSubjectList.get(i).toLowerCase();
+            if (subject.contains("coen")) {
+                acceptedSubjectList.add(subject);
+                System.out.println("Subject: " + subject);
+            }
+        }
+
+        return acceptedSubjectList;
+    }
+
     // Start DB make sure to compile with: javac -cp <path/.jar file>: Server_A.java
     // Run DB with: java -cp <path/.jar file>: Server_A
     public static void restartDB() {
@@ -77,8 +92,6 @@ public class Server_A {
             e.printStackTrace();
         }
     }
-
-    // TODO: Implement database search function for NAME, LIST OF SUBJECTS
 
     public static void main(String[] args) throws IOException, ClassNotFoundException {
 
@@ -184,11 +197,9 @@ public class Server_A {
                         }
 
                         db_int.disconnect(); // Close DB after checking for user
-
                     } catch (SQLException e) {
                         e.printStackTrace();
                     }
-
                     sendServerFlag = true;  //Send to server
                 }
 
@@ -219,7 +230,6 @@ public class Server_A {
                         }
 
                         db_int.disconnect(); // Close DB after checking for user
-                    
                     } catch (SQLException e) {
                         e.printStackTrace();
                     }
@@ -268,7 +278,6 @@ public class Server_A {
                         }
 
                         db_int.disconnect(); // Close DB after checking for user
-                    
                     } catch (SQLException e) {
                         e.printStackTrace();
                     }
@@ -278,31 +287,51 @@ public class Server_A {
 
                 // Add subjects of interest to user
                 else if (messageTypeReceived.equalsIgnoreCase("SUBJECTS")) {
-                    ArrayList<String> subjectList = new ArrayList<>((ArrayList<String>) messageListClient[3]);
-                    
-                    //if (if name exists && subject is from COEN)
-                    messageReplyClient = new Object[4];
-                    messageReplyClient[0] = "SUBJECTS-UPDATED";
-                    messageReplyClient[1] = messageListClient[1].toString();
-                    messageReplyClient[2] = messageListClient[2].toString();
-                    messageReplyClient[3] = subjectList;
+                    try {
+                        db_int.connect();
 
-                    String stringList = "";
-                    System.out.println("Number of subjects: " + subjectList.size());
-                    for (String subject : subjectList) {
-                        System.out.println("Subject: " + subject);
-                        stringList += subject + ","; 
+                        // Check if name exists in DB
+                        String[] userInfo = db_int.getUserInfo(messageListClient[2].toString());
+                        if (userInfo != null) {
+                            nameExists = true;
+                        }
+                        else {
+                            nameExists = false;
+                        }
+
+                        // Get list of subjects sent
+                        ArrayList<String> subjectList = new ArrayList<>((ArrayList<String>) messageListClient[3]);
+                        ArrayList<String> acceptedSubjectList = areSubject(subjectList);
+
+                        if (nameExists.equals(true) && acceptedSubjectList.size() != 0) {
+                            messageReplyClient = new Object[4];
+                            messageReplyClient[0] = "SUBJECTS-UPDATED";
+                            messageReplyClient[1] = messageListClient[1].toString();
+                            messageReplyClient[2] = messageListClient[2].toString();
+                            messageReplyClient[3] = acceptedSubjectList;
+
+                            // Save subjects in DB
+                            String stringList = "";
+                            System.out.println("Number of valid subjects: " + acceptedSubjectList.size());
+                            for (String subject : acceptedSubjectList) {
+                                db_int.registerToSubject(messageListClient[2].toString(), subject);
+                                stringList += subject + ","; 
+                            }
+                            System.out.println("Subject List: " + stringList.substring(0, stringList.length() - 1));
+                        }
+
+                        else {
+                            messageReplyClient = new Object[4];
+                            messageReplyClient[0] = "SUBJECTS-REJECTED";
+                            messageReplyClient[1] = messageListClient[1].toString();
+                            messageReplyClient[2] = messageListClient[2].toString();
+                            messageReplyClient[3] = subjectList;
+                        }
+
+                        db_int.disconnect(); // Close DB after checking for user
+                    } catch (SQLException e) {
+                        e.printStackTrace();
                     }
-                    System.out.println("Subject List: " + stringList.substring(0, stringList.length() - 1));
-
-                    /*
-                    // (if name doesn't exist || subject is NOT COEN)
-                    messageReplyClient = new Object[4];
-                    messageReplyClient[0] = "SUBJECTS-REJECTED";
-                    messageReplyClient[1] = messageListClient[1].toString();
-                    messageReplyClient[2] = messageListClient[2].toString();
-                    messageReplyClient[3] = subjectList;
-                    */
                     sendServerFlag = true;  //Send to server
                 }
 
@@ -383,14 +412,17 @@ public class Server_A {
 
                 // Receive server updated subjects and print
                 else if (messageTypeReceived.equalsIgnoreCase("SUBJECTS-UPDATED")) {
+                    // Get list of subjects
                     ArrayList<String> subjectList = new ArrayList<>((ArrayList<String>) messageListClient[3]);
 
+                    // Verify if list is from COEN
+                    ArrayList<String> acceptedSubjects = areSubject(subjectList);
                     String stringList = "";
-                    for (String subject : subjectList) {
+                    for (String subject : acceptedSubjects) {
                         stringList += subject + ","; 
                     }
 
-                    System.out.println("User <" + messageListClient[2].toString() + "> updated " + subjectList.size() + " subjects: " + stringList.substring(0, stringList.length() - 1));
+                    System.out.println("User <" + messageListClient[2].toString() + "> updated " + acceptedSubjects.size() + " subjects: " + stringList.substring(0, stringList.length() - 1));
                 }
 
                 // Receive server updated IP and socket
@@ -433,14 +465,13 @@ public class Server_A {
                         messageReplyServer[3] = messageListClient[3].toString(); // IP ADDRESS
                         messageReplyServer[4] = messageListClient[4].toString(); // SOCKET#
                     }
-                    // Name exists
                     else {
-                    messageReplyServer = new Object[5];
-                    messageReplyServer[0] = "REGISTER-DENIED";
-                    messageReplyServer[1] = messageListClient[1].toString(); // RQ#
-                    messageReplyServer[2] = messageListClient[2].toString(); // Name
-                    messageReplyServer[3] = messageListClient[3].toString(); // IP ADDRESS
-                    messageReplyServer[4] = messageListClient[4].toString(); // SOCKET#
+                        messageReplyServer = new Object[5];
+                        messageReplyServer[0] = "REGISTER-DENIED";
+                        messageReplyServer[1] = messageListClient[1].toString(); // RQ#
+                        messageReplyServer[2] = messageListClient[2].toString(); // Name
+                        messageReplyServer[3] = messageListClient[3].toString(); // IP ADDRESS
+                        messageReplyServer[4] = messageListClient[4].toString(); // SOCKET#
                     }
                 }
 
@@ -452,7 +483,6 @@ public class Server_A {
                         messageReplyServer[0] = "DE-REGISTER";
                         messageReplyServer[1] = messageListClient[2].toString();
                     }
-
                     else {
                         messageReplyServer = new Object[2];
                         messageReplyServer[0] = "INVALID-DE-REGISTER";
@@ -462,8 +492,7 @@ public class Server_A {
 
                 // Update user's IP Address and Socket#
                 else if (messageTypeReceived.equalsIgnoreCase("UPDATE")) {
-                    // If user exists, ONLY tell other server
-                    // Do not tell other server is user DOES NOT exist
+                    // ONLY reply to server if user exists
                     if (nameExists.equals(true)) {
                         messageReplyServer = new Object[5];
                         messageReplyServer[0] = "UPDATE-CONFIRMED";
@@ -476,13 +505,18 @@ public class Server_A {
                 
                 // Add subjects of interest to user
                 else if (messageTypeReceived.equalsIgnoreCase("SUBJECTS")) {
-                    //if (if name exists && subject is from COEN)
-                    messageReplyServer = new Object[4];
-                    messageReplyServer[0] = "SUBJECTS-UPDATED";
-                    messageReplyServer[1] = messageListClient[1].toString();
-                    messageReplyServer[2] = messageListClient[2].toString();
+                    // Acquire list to send back to user
                     ArrayList<String> subjectList = new ArrayList<>((ArrayList<String>) messageListClient[3]);
-                    messageReplyServer[3] = subjectList;
+                    // Acquire list of ONLY coen subjects
+                    ArrayList<String> acceptedSubjectList = areSubject(subjectList);
+
+                    if (nameExists.equals(true) && acceptedSubjectList.size() != 0) {
+                        messageReplyServer = new Object[4];
+                        messageReplyServer[0] = "SUBJECTS-UPDATED";
+                        messageReplyServer[1] = messageListClient[1].toString();
+                        messageReplyServer[2] = messageListClient[2].toString();
+                        messageReplyServer[3] = acceptedSubjectList;
+                    }
                 }
 
                 else if (messageTypeReceived.equalsIgnoreCase("CHANGE-SERVER")) {
