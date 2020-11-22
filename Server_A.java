@@ -14,6 +14,7 @@ public class Server_A {
 
     // For database
     private static DB_interface db_int;
+    private static Boolean nameExists = false;
 
     //TODO: before demo, we need to modify the code to run with distinct IP addresses.
     static {
@@ -65,15 +66,12 @@ public class Server_A {
 
     // Start DB make sure to compile with: javac -cp <path/.jar file>: Server_A.java
     // Run DB with: java -cp <path/.jar file>: Server_A
-    public static void startDB() {
+    public static void restartDB() {
         db_int = new DB_interface();
         try {
             db_int.connect();
-
-            System.out.println("SQL DB is connected.");
-            while (true) {
-                // TODO: Insert code within here while DB is active
-            }
+            System.out.println("Initial SQL DB connection activated...");
+            db_int.disconnect();
 
         } catch (SQLException e) {
             e.printStackTrace();
@@ -103,8 +101,9 @@ public class Server_A {
         Scanner sc = new Scanner(System.in);
         // Timer time = new Timer();
 
-
-        //startDB(); //Start DB make sure to compile with -cp <.jar file> and run with java -cp <.jar file>
+        // Start DB make sure to compile with: javac -cp <path/.jar file>: Server_A.java
+        // Run DB with: java -cp <path/.jar file>: Server_A
+        restartDB(); 
 
 
         while (true) {
@@ -136,6 +135,7 @@ public class Server_A {
             String messageTypeReceived = messageListClient[0].toString(); 
             //----------------------------------------------------------------------------------------------
 
+
             if (serverActive.equals(true)) {
                 // Receive server updated IP and socket
                 if (messageTypeReceived.equalsIgnoreCase("UPDATE-SERVER")) {
@@ -144,53 +144,134 @@ public class Server_A {
                     System.out.println("IP Changed to: " + serverB_Address + " port: " + serverB_port);
                 }
 
-                // Add user to server 
+                // Add user to server
                 if (messageTypeReceived.equalsIgnoreCase("REGISTER")) {
-                    // TODO: if (name doesnt exist)
-                    messageReplyClient = new Object[2];
-                    messageReplyClient[0] = "REGISTERED";
-                    messageReplyClient[1] = messageListClient[1].toString();
+                    try {
+                        db_int.connect();
 
-                    // Print out contents from client's message
-                    for (int i = 0; i < messageListClient.length; i++) {
-                        System.out.println("Received: " + messageListClient[i].toString());
+                        // Check if name exists in DB
+                        String[] userInfo = db_int.getUserInfo(messageListClient[2].toString());
+                        if (userInfo != null) {
+                            nameExists = true;
+                        }
+                        else {
+                            nameExists = false;
+                        }
+
+                        // Reply to client if the name doesn't exist
+                        if (nameExists.equals(false)) {
+                            messageReplyClient = new Object[2];
+                            messageReplyClient[0] = "REGISTERED";
+                            messageReplyClient[1] = messageListClient[1].toString();
+
+                            // Print out contents from client's message
+                            for (int i = 0; i < messageListClient.length; i++) {
+                                System.out.println("Received: " + messageListClient[i].toString());
+                            }
+                            System.out.println("Message Received From: " + receivePacket.getSocketAddress().toString());
+
+                            // Add user to DB
+                            String userFullAddress = messageListClient[3].toString() + ":" + messageListClient[4].toString();
+                            db_int.createNewUserAccount(messageListClient[2].toString(), userFullAddress);
+                        }
+                        else {
+                            messageReplyClient = new Object[3];
+                            messageReplyClient[0] = "REGISTER-DENIED";
+                            messageReplyClient[1] = messageListClient[1].toString();
+                            messageReplyClient[2] = "Name already in use.";
+
+                            System.out.println("REGISTER-DENIED: User already exists!");
+                        }
+
+                        db_int.disconnect(); // Close DB after checking for user
+
+                    } catch (SQLException e) {
+                        e.printStackTrace();
                     }
-                    System.out.println("Message Received From: " + receivePacket.getSocketAddress().toString());
-
-
-                    /*
-                    // TODO: else
-                    messageReplyClient = new Object[3];
-                    messageReplyClient[0] = "REGISTER-DENIED";
-                    messageReplyClient[1] = messageListClient[1].toString();
-                    messageReplyClient[2] = "Name already in use.";
-                    */
 
                     sendServerFlag = true;  //Send to server
                 }
 
-                //Remove user from server
+                // Remove user from server
                 else if (messageTypeReceived.equalsIgnoreCase("DE-REGISTER")) {
+                    try {
+                        db_int.connect();
+
+                        // Check if name exists in DB
+                        String[] userInfo = db_int.getUserInfo(messageListClient[2].toString());
+                        if (userInfo != null) {
+                            nameExists = true;
+                        }
+                        else {
+                            nameExists = false;
+                        }
+
+                        // Remove user if it exists in DB
+                        if (nameExists.equals(true)) {
+                            System.out.println("DE-REGISTER SUCCESS: deleting user <" + messageListClient[2].toString() + ">...");
+
+                            // Delete user from DB
+                            db_int.deleteUser(messageListClient[2].toString());
+                        }
+
+                        else {
+                            System.out.println("DE-REGISTER FAILED: user <" + messageListClient[2].toString()  + "> does not exist...");
+                        }
+
+                        db_int.disconnect(); // Close DB after checking for user
+                    
+                    } catch (SQLException e) {
+                        e.printStackTrace();
+                    }
                     sendServerFlag = true;  //Send to server
                 }
 
                 // Update user's IP Address and Socket#
                 else if (messageTypeReceived.equalsIgnoreCase("UPDATE")) {
-                    //if (name exists)
-                    messageReplyClient = new Object[5];
-                    messageReplyClient[0] = "UPDATE-CONFIRMED";
-                    messageReplyClient[1] = messageListClient[1].toString();
-                    messageReplyClient[2] = messageListClient[2].toString();
-                    messageReplyClient[3] = messageListClient[3].toString();
-                    messageReplyClient[4] = messageListClient[4].toString();
+                    try {
+                        db_int.connect();
 
-                    /*
-                    //if (name doesn't exist)
-                    messageReplyClient = new Object[3];
-                    messageReplyClient[0] = "UPDATE-DENIED";
-                    messageReplyClient[1] = messageListClient[1].toString();
-                    messageReplyClient[2] = "Name does not exist.";
-                    */
+                        // Check if name exists in DB
+                        String[] userInfo = db_int.getUserInfo(messageListClient[2].toString());
+                        if (userInfo != null) {
+                            nameExists = true;
+                        }
+                        else {
+                            nameExists = false;
+                        }
+
+                        if (nameExists.equals(true)) {
+                            System.out.println("UPDATE-CONFIRMED: updating user <" + userInfo[0] + "> address...");
+                            System.out.println("IP: " + messageListClient[3].toString() + " Socket#: " + messageListClient[4].toString());
+                            
+                            // Send message to client
+                            messageReplyClient = new Object[5];
+                            messageReplyClient[0] = "UPDATE-CONFIRMED";
+                            messageReplyClient[1] = messageListClient[1].toString();
+                            messageReplyClient[2] = messageListClient[2].toString();
+                            messageReplyClient[3] = messageListClient[3].toString();
+                            messageReplyClient[4] = messageListClient[4].toString();
+
+                            // Update user info in DB
+                            String userFullAddress = messageListClient[3].toString() + ":" + messageListClient[4].toString();
+                            db_int.updateAddress(messageListClient[2].toString(), userFullAddress);
+                        }
+
+                        else {
+                            System.out.println("UPDATE-DENIED: user <" + userInfo[0]  + "> does not exist... not deleting");
+
+                            // Send message to client
+                            messageReplyClient = new Object[3];
+                            messageReplyClient[0] = "UPDATE-DENIED";
+                            messageReplyClient[1] = messageListClient[1].toString();
+                            messageReplyClient[2] = "Name does not exist";
+                        }
+
+                        db_int.disconnect(); // Close DB after checking for user
+                    
+                    } catch (SQLException e) {
+                        e.printStackTrace();
+                    }
 
                     sendServerFlag = true;  //Send to server
                 }
@@ -282,11 +363,17 @@ public class Server_A {
                         System.out.println("Received: " + messageListClient[i].toString());
                     }
                     System.out.println("Message Received From: " + receivePacket.getSocketAddress().toString());
+                    System.out.println("Register-denied: user <" + messageListClient[2].toString() + "> already exists...");
                 }
 
                 // Receive server updated IP and socket
                 else if (messageTypeReceived.equalsIgnoreCase("DE-REGISTER")) {
-                    System.out.println("User <" + messageListClient[1].toString() + "> has been de-registed.");
+                    System.out.println("De-register: user <" + messageListClient[1].toString() + "> has been de-registered...");
+                }
+
+                // Receive server updated IP and socket
+                else if (messageTypeReceived.equalsIgnoreCase("INVALID-DE-REGISTER")) {
+                    System.out.println("Invalid de-register: user <" + messageListClient[1].toString() + "> does not exist...");
                 }
 
                 // Receive server updated IP and socket
@@ -334,45 +421,57 @@ public class Server_A {
             //---------------------------------------Send to server B----------------------------------------
             //-------------------------------------While server active---------------------------------------
             if (sendServerFlag.equals(true) && serverActive.equals(true)) {
+
+                // Add user to server
                 if (messageTypeReceived.equalsIgnoreCase("REGISTER")) {
-                    // TODO: if (name doesnt exist)
+                    // Name doesn't exist
+                    if (nameExists.equals(false)) {
+                        messageReplyServer = new Object[5];
+                        messageReplyServer[0] = "REGISTERED";
+                        messageReplyServer[1] = messageListClient[1].toString(); // RQ#
+                        messageReplyServer[2] = messageListClient[2].toString(); // Name
+                        messageReplyServer[3] = messageListClient[3].toString(); // IP ADDRESS
+                        messageReplyServer[4] = messageListClient[4].toString(); // SOCKET#
+                    }
+                    // Name exists
+                    else {
                     messageReplyServer = new Object[5];
-                    messageReplyServer[0] = "REGISTERED";
+                    messageReplyServer[0] = "REGISTER-DENIED";
                     messageReplyServer[1] = messageListClient[1].toString(); // RQ#
                     messageReplyServer[2] = messageListClient[2].toString(); // Name
                     messageReplyServer[3] = messageListClient[3].toString(); // IP ADDRESS
                     messageReplyServer[4] = messageListClient[4].toString(); // SOCKET#
-
-                    // TODO: else
-                    // messageReplyServer = new Object[5];
-                    // messageReplyServer[0] = "REGISTER-DENIED";
-                    // messageReplyServer[1] = messageListClient[1].toString(); // RQ#
-                    // messageReplyServer[2] = messageListClient[2].toString(); // Name
-                    // messageReplyServer[3] = messageListClient[3].toString(); // IP ADDRESS
-                    // messageReplyServer[4] = messageListClient[4].toString(); // SOCKET#
+                    }
                 }
 
                 // Remove user from server    
                 else if (messageTypeReceived.equalsIgnoreCase("DE-REGISTER")) {
-                    //If name exists
-                    messageReplyServer = new Object[2];
-                    messageReplyServer[0] = "DE-REGISTER";
-                    messageReplyServer[1] = messageListClient[2].toString();
-                    //OPTIONAL: Say to client that it was removed
+                    // If name exists
+                    if (nameExists.equals(true)) {
+                        messageReplyServer = new Object[2];
+                        messageReplyServer[0] = "DE-REGISTER";
+                        messageReplyServer[1] = messageListClient[2].toString();
+                    }
 
-                    //If name doesn't exist
-                    // Do nothing
-                    // OPTIONAL: Say to client that it doesn't exist
+                    else {
+                        messageReplyServer = new Object[2];
+                        messageReplyServer[0] = "INVALID-DE-REGISTER";
+                        messageReplyServer[1] = messageListClient[2].toString();
+                    }
                 }
 
                 // Update user's IP Address and Socket#
                 else if (messageTypeReceived.equalsIgnoreCase("UPDATE")) {
-                    messageReplyServer = new Object[5];
-                    messageReplyServer[0] = "UPDATE-CONFIRMED";
-                    messageReplyServer[1] = messageListClient[1].toString();
-                    messageReplyServer[2] = messageListClient[2].toString();
-                    messageReplyServer[3] = messageListClient[3].toString();
-                    messageReplyServer[4] = messageListClient[4].toString();
+                    // If user exists, ONLY tell other server
+                    // Do not tell other server is user DOES NOT exist
+                    if (nameExists.equals(true)) {
+                        messageReplyServer = new Object[5];
+                        messageReplyServer[0] = "UPDATE-CONFIRMED";
+                        messageReplyServer[1] = messageListClient[1].toString();
+                        messageReplyServer[2] = messageListClient[2].toString();
+                        messageReplyServer[3] = messageListClient[3].toString();
+                        messageReplyServer[4] = messageListClient[4].toString();
+                    }
                 }
                 
                 // Add subjects of interest to user
