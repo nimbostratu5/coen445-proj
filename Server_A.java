@@ -132,7 +132,6 @@ public class Server_A {
                 System.out.println("Subject: " + subject);
             }
         }
-
         return acceptedSubjectList;
     }
 
@@ -154,7 +153,7 @@ public class Server_A {
     }
 
 
-    
+
     public static void main(String[] args) throws IOException, ClassNotFoundException {
 
         System.out.println("Starting Server...");
@@ -167,7 +166,6 @@ public class Server_A {
         Object[] messageReplyClient = null;
 
         // For replying back to server B
-        DatagramPacket replyServerPacket = null;
         Object[] messageReplyServer = null;
         Boolean sendServerFlag = false;
 
@@ -176,8 +174,6 @@ public class Server_A {
         Scanner sc = new Scanner(System.in);
         // Timer time = new Timer();
 
-        // Start DB make sure to compile with: javac -cp <path/.jar file>: Server_A.java
-        // Run DB with: java -cp <path/.jar file>: Server_A
         restartDB(); 
 
 
@@ -209,7 +205,6 @@ public class Server_A {
             // Hold message type from the message sent to the server
             String messageTypeReceived = messageListClient[0].toString(); 
             //----------------------------------------------------------------------------------------------
-
 
             if (serverActive.equals(true)) {
                 // Receive server updated IP and socket
@@ -399,12 +394,11 @@ public class Server_A {
                     sendServerFlag = true;  //Send to server
                 }
 
-                // Questions to ask Ion:
+                // TODO: Questions to ask Ion:
                 // 1. How can i use the subject name (not id) to find all users associated to subject (show interface method getAllUsersSubscribed)
                 // 2. Looking at subject_313, this one returns an address which is missing the port (127.0.0.1) versus users shows address with port (127.0.0.1:9000)
 
                 // Send message to users with subject of interest ONE SUBJECT PUBLISHED AT A TIME
-                // TODO: Ask Ion how i can get the subject_id to the specific subject i want to sent to   
                 else if (messageTypeReceived.equalsIgnoreCase("PUBLISH")) {
 
                     /*
@@ -515,7 +509,7 @@ public class Server_A {
                     for (int i = 0; i < messageListClient.length; i++) {
                         System.out.println("Received: " + messageListClient[i].toString());
                     }
-                    System.out.println("Message Received From: " + receivePacket.getSocketAddress().toString());
+                    System.out.println("Registered: User <" + messageListClient[2].toString() + "> registered and received from: " + receivePacket.getSocketAddress().toString());
                 }
 
                 else if (messageTypeReceived.equalsIgnoreCase("REGISTER-DENIED")) {
@@ -523,11 +517,11 @@ public class Server_A {
                         System.out.println("Received: " + messageListClient[i].toString());
                     }
                     System.out.println("Message Received From: " + receivePacket.getSocketAddress().toString());
-                    System.out.println("Register-denied: user <" + messageListClient[2].toString() + "> already exists...");
+                    System.out.println("Register-Denied: User <" + messageListClient[2].toString() + "> already exists...");
                 }
 
                 else if (messageTypeReceived.equalsIgnoreCase("DE-REGISTER")) {
-                    System.out.println("De-register: user <" + messageListClient[1].toString() + "> has been de-registered...");
+                    System.out.println("De-Register: User <" + messageListClient[1].toString() + "> has been de-registered...");
                 }
 
                 // else if (messageTypeReceived.equalsIgnoreCase("INVALID-DE-REGISTER")) {
@@ -549,12 +543,12 @@ public class Server_A {
                         stringList += subject + ","; 
                     }
 
-                    System.out.println("User <" + messageListClient[2].toString() + "> updated " + subjectList.size() + " subjects: " + stringList.substring(0, stringList.length() - 1));
+                    System.out.println("Subjects-Updated: User <" + messageListClient[2].toString() + "> updated " + subjectList.size() + " subjects: " + stringList.substring(0, stringList.length() - 1));
                 }
 
                 // Receive server updated IP and socket
                 else if (messageTypeReceived.equalsIgnoreCase("CHANGE-SERVER")) {
-                    System.out.println("Switched servers: Server A active.");
+                    System.out.println("Change-Server: Server A active.");
                     serverActive = true;
                     sendServerFlag = false;
                 }
@@ -634,8 +628,10 @@ public class Server_A {
                 
                 // Add subjects of interest to user
                 else if (messageTypeReceived.equalsIgnoreCase("SUBJECTS")) {
+
                     // Acquire list to send back to user
                     ArrayList<String> subjectList = new ArrayList<>((ArrayList<String>) messageListClient[3]);
+
                     // Acquire list of ONLY coen subjects
                     ArrayList<String> acceptedSubjectList = areSubject(subjectList);
 
@@ -659,11 +655,11 @@ public class Server_A {
                 //--------------------------Send message to server B----------------------------------
                 if (messageReplyServer != null) {
 
-                    // Don't send to server again
-                    sendServerFlag = false;
-
                     // Send message to server
                     sendMessage(messageReplyServer, serverB_Address.toString(), String.valueOf(serverB_Port));
+
+                    // Don't send to server again
+                    sendServerFlag = false;
                 }
             }
         }
