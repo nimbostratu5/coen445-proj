@@ -42,26 +42,67 @@ public class Server_A {
         return (Object[]) is.readObject();
     }
 
-    public static void sendMessage(Object[] message, byte[] byteMessage, DatagramPacket packet) {
-        // Send message to client
-        if (message != null) {
-            DatagramPacket replyPacket = null;
+    // If replying to the client using the same packet info
+    // public static void sendMessage(Object[] message, byte[] byteMessage, DatagramPacket packet) {
+    public static void sendMessage(Object[] message, DatagramPacket packet) {
+        
+        // Create packet and array to send data with
+        DatagramPacket replyPacket = null;
+        byte[] replyDataServer = new byte[65535];
 
-            try {
-                byteMessage = serialize(message);
-            } catch (IOException e) {
-                System.out.println("Message not serialized.");
-                e.printStackTrace();
-            }
-
-            replyPacket = new DatagramPacket(byteMessage, byteMessage.length, packet.getSocketAddress());
-            try {
-                serverASocket.send(replyPacket);
-            } catch (IOException e) {
-                System.out.println("Message not sent.");
-                e.printStackTrace();
-            }
+        // Serialize the message into data
+        try {
+            replyDataServer = serialize(message);
+        } catch (IOException e) {
+            System.out.println("Message not serialized.");
+            e.printStackTrace();
         }
+
+        // Populate the packet and send the message
+        replyPacket = new DatagramPacket(replyDataServer, replyDataServer.length, packet.getSocketAddress());
+        try {
+            serverASocket.send(replyPacket);
+        } catch (IOException e) {
+            System.out.println("Message not sent.");
+            e.printStackTrace();
+        }
+    }
+
+    // To send a message to a specific ip and port as opposed to a reply
+    public static void sendMessage(Object[] message, byte[] byteMessage, String ip, String port) {
+        // Create packet to use to reply with
+        DatagramPacket replyPacket = null;
+
+        byte[] replyDataServer = new byte[65535]; // TODO: Replace byteMessage with this variable, and remove it as an argument in the method
+
+        // Serialize message first
+        try {
+            byteMessage = serialize(message);
+        } catch (IOException e) {
+            System.out.println("Message not serialized.");
+            e.printStackTrace();
+        }
+
+        // Create packet with specific ip and port to send to 
+        InetAddress sendIp = null;
+        int portNumber = 9000;
+        try {
+            sendIp = InetAddress.getByName(ip);
+            portNumber = Integer.parseInt(port);
+            replyPacket = new DatagramPacket(byteMessage, byteMessage.length, sendIp, portNumber);
+        } catch (UnknownHostException e) {
+            System.out.println("Server address error.");
+            e.printStackTrace();
+        }
+        
+        // Use socket to send packet
+        try {
+            serverASocket.send(replyPacket);
+        } catch (IOException e) {
+            System.out.println("Message not sent.");
+            e.printStackTrace();
+        }
+
     }
 
     // Return subjects if they are from COEN
@@ -335,29 +376,96 @@ public class Server_A {
                     sendServerFlag = true;  //Send to server
                 }
 
-                // Send message to users with subject of interest
-                else if (messageTypeReceived.equalsIgnoreCase("PUBLISH")) {
-                    /*
-                    // if (name exists && user.subject exists)
-                    // for (users with subject, do this for all)
-                    currentServer = InetAddress.getByName("NAME.IP");
-                    messageReplyClient = new Object[4];
-                    messageReplyClient[0] = "MESSAGE";
-                    messageReplyClient[1] = messageListClient[2].toString();
-                    messageReplyClient[2] = messageListClient[3].toString();
-                    messageReplyClient[3] = messageListClient[4].toString();
+                // Questions to ask Ion:
+                // 1. How can i use the subject name (not id) to find all users associated to subject (show interface method getAllUsersSubscribed)
+                // 2. Looking at subject_313, this one returns an address which is missing the port (127.0.0.1) versus users shows address with port (127.0.0.1:9000)
 
-                    // if (name doesn't exist && subject doesn't exist)
-                    messageReplyClient = new Object[3];
-                    messageReplyClient[0] = "PUBLISH-DENIED";
-                    messageReplyClient[1] = messageListClient[1].toString();
-                    messageReplyClient[2] = "Name does not exist.";
+                // Send message to users with subject of interest ONE SUBJECT PUBLISHED AT A TIME
+                // TODO: Ask Ion how i can get the subject_id to the specific subject i want to sent to   
+                else if (messageTypeReceived.equalsIgnoreCase("PUBLISH")) {
+
+                    /*
+                    try {
+                        db_int.connect();
+
+                        // Check if client sender's name exists in DB
+                        String[] userInfo = db_int.getUserInfo(messageListClient[2].toString());
+                        if (userInfo != null) {
+                            nameExists = true;
+                        }
+                        else {
+                            nameExists = false;
+                        }
+
+                        // Get subject of interest and message to publish
+                        String subject = messageListClient[3].toString();
+                        String text = messageListClient[4].toString();
+
+                        // Get all users subscribed to the subject of interest
+                        // TODO: GET THIS FIXED WITH ION AND THEN UNCOMMENT
+                        ArrayList<String[]> usersSubscribed = db_int.getAllUsersSubscribed(subject);
+
+                        // If the client sender is registered and if there are users subscribed to the subject
+                        if (nameExists && usersSubscribed.size() > 0) {
+
+                            // If there are users subscribed to the subject of interest
+                            if (usersSubscribed.size() > 0) {
+
+                                // For each user subscribed to the subject, send them a message
+                                for (int i = 0; i < usersSubscribed.size(); i++) {
+
+                                    // Get the subscribed user's name and address to send to
+                                    String name = usersSubscribed.get(i)[0];
+                                    String fullAddress = usersSubscribed.get(i)[1];
+                                    String[] addressSplit = fullAddress.split(":"); // IP[0] and Port[1]
+
+                                    // Create message to send to the subscribed user
+                                    messageReplyClient = new Object[4];
+                                    messageReplyClient[0] = "MESSAGE";
+                                    messageReplyClient[1] = name;
+                                    messageReplyClient[2] = subject;
+                                    messageReplyClient[3] = text;
+
+                                    // Send message
+                                    if (messageReplyClient != null) {
+                                        sendMessage(messageReplyClient, replyDataClient, addressSplit[0], addressSplit[1]);
+                                    }
+                                }
+                                
+                                // Skip sending message back to user publishing message
+                                messageReplyClient = null;
+                            }
+                        }
+                        
+                        // If sender isn't registered 
+                        else if (!nameExists) {
+                            // Create message to send
+                            messageReplyClient = new Object[3];
+                            messageReplyClient[0] = "PUBLISH-DENIED";
+                            messageReplyClient[1] = messageListClient[1].toString();
+                            messageReplyClient[2] = "Unregistered user not allowed to publish";
+                        }
+                        // If no users subscribed to the subject of interest
+                        else {
+                            // Create message to send
+                            messageReplyClient = new Object[3];
+                            messageReplyClient[0] = "PUBLISH-DENIED";
+                            messageReplyClient[1] = messageListClient[1].toString();
+                            messageReplyClient[2] = "No users subscribed to subject of interest";
+                        }
+
+                        db_int.disconnect(); // Close DB after checking for user
+                    } catch (SQLException e) {
+                        e.printStackTrace();
+                    }
                     */
+
                 }
 
                 // TODO: Implement timer to set serverActive to true or false based on time and serverSwap to true
                 // TODO: Change this so that this is executable directly from file itself without needing user input
                 //@@@@@@@@@@@@@@@@@@@@@@@@Important to change SOCKET to 3000 if on server_B@@@@@@@@@@@@@@@@@@@@@
+                
                 // Change server to receive client data.
                 else if (messageTypeReceived.equalsIgnoreCase("CHANGE-SERVER")) {
                     //if (name exists)
@@ -371,7 +479,8 @@ public class Server_A {
 
                 // Send message to client
                 if (messageReplyClient != null) {
-                    sendMessage(messageReplyClient, replyDataClient, receivePacket);
+                    // sendMessage(messageReplyClient, replyDataClient, receivePacket);
+                    sendMessage(messageReplyClient, receivePacket);
                 }
                 replyDataClient = new byte[65535]; // Clear the buffer after every message
             }
@@ -395,34 +504,30 @@ public class Server_A {
                     System.out.println("Register-denied: user <" + messageListClient[2].toString() + "> already exists...");
                 }
 
-                // Receive server updated IP and socket
                 else if (messageTypeReceived.equalsIgnoreCase("DE-REGISTER")) {
                     System.out.println("De-register: user <" + messageListClient[1].toString() + "> has been de-registered...");
                 }
 
-                // Receive server updated IP and socket
-                else if (messageTypeReceived.equalsIgnoreCase("INVALID-DE-REGISTER")) {
-                    System.out.println("Invalid de-register: user <" + messageListClient[1].toString() + "> does not exist...");
-                }
+                // else if (messageTypeReceived.equalsIgnoreCase("INVALID-DE-REGISTER")) {
+                //     System.out.println("Invalid de-register: user <" + messageListClient[1].toString() + "> does not exist...");
+                // }
 
-                // Receive server updated IP and socket
                 else if (messageTypeReceived.equalsIgnoreCase("UPDATE-CONFIRMED")) {
                     System.out.println("User <" + messageListClient[2].toString() + "> IP Changed to: " + messageListClient[3].toString() + " port: " + messageListClient[4].toString());
                 }
 
                 // Receive server updated subjects and print
                 else if (messageTypeReceived.equalsIgnoreCase("SUBJECTS-UPDATED")) {
-                    // Get list of subjects
+
+                    // Get list of correct subjects from other server
                     ArrayList<String> subjectList = new ArrayList<>((ArrayList<String>) messageListClient[3]);
 
-                    // Verify if list is from COEN
-                    ArrayList<String> acceptedSubjects = areSubject(subjectList);
                     String stringList = "";
-                    for (String subject : acceptedSubjects) {
+                    for (String subject : subjectList) {
                         stringList += subject + ","; 
                     }
 
-                    System.out.println("User <" + messageListClient[2].toString() + "> updated " + acceptedSubjects.size() + " subjects: " + stringList.substring(0, stringList.length() - 1));
+                    System.out.println("User <" + messageListClient[2].toString() + "> updated " + subjectList.size() + " subjects: " + stringList.substring(0, stringList.length() - 1));
                 }
 
                 // Receive server updated IP and socket
@@ -432,6 +537,8 @@ public class Server_A {
                     sendServerFlag = false;
                 }
                 
+                // TODO: Figure out how to place this within the while loop to allow it to be trigged while running
+                // TODO: UPDATE-SERVER, then take input??
                 //TODO: Why is this code not reachable while running the program? Only works when i put it at START of while loop
                 else if (sc.hasNextLine()) {
                     String updateServer = sc.next();
@@ -483,11 +590,11 @@ public class Server_A {
                         messageReplyServer[0] = "DE-REGISTER";
                         messageReplyServer[1] = messageListClient[2].toString();
                     }
-                    else {
-                        messageReplyServer = new Object[2];
-                        messageReplyServer[0] = "INVALID-DE-REGISTER";
-                        messageReplyServer[1] = messageListClient[2].toString();
-                    }
+                    // else {
+                    //     messageReplyServer = new Object[2];
+                    //     messageReplyServer[0] = "INVALID-DE-REGISTER";
+                    //     messageReplyServer[1] = messageListClient[2].toString();
+                    // }
                 }
 
                 // Update user's IP Address and Socket#
@@ -519,6 +626,7 @@ public class Server_A {
                     }
                 }
 
+                // Change active servers
                 else if (messageTypeReceived.equalsIgnoreCase("CHANGE-SERVER")) {
                     System.out.println("Switched servers: Server A inactive.");
                     messageReplyServer = new Object[1];
@@ -528,13 +636,20 @@ public class Server_A {
 
                 //--------------------------Send message to server B----------------------------------
                 if (messageReplyServer != null) {
-                    // sendMessage(messageReplyServer, replyDataServer, ) //TODO: Fix so it works with method
+                    // Don't send to server again
+                    sendServerFlag = false;
 
                     byte[] replyDataServer = new byte[65535];
-                    sendServerFlag = false;
+                    //TODO: Fix so it works with method
+                    //sendMessage(messageReplyServer, replyDataServer, serverB_Address.toString(), String.valueOf(serverB_port));
+
+                    //--------------------------Remove if sendMessage works-------------------------
                     replyDataServer = serialize(messageReplyServer);
                     replyServerPacket = new DatagramPacket(replyDataServer, replyDataServer.length, serverB_Address, serverB_port);
                     serverASocket.send(replyServerPacket);
+                    //--------------------------Remove if sendMessage works-------------------------
+
+
                     replyDataServer = new byte[65535]; // Clear the buffer after every message
                 }
             }
