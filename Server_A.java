@@ -10,7 +10,7 @@ public class Server_A {
     
     // For receiving from server B
     private static InetAddress serverB_Address; 
-    private static int serverB_port;
+    private static int serverB_Port;
 
     // For database
     private static DB_interface db_int;
@@ -21,7 +21,7 @@ public class Server_A {
         try {
             serverB_Address = InetAddress.getLocalHost(); //TO BE CHANGED TO DISTINCT IP
             serverASocket = new DatagramSocket(3000);   //@@@@@@@@@@@@@CHANGE TO PROPER VALUE FOR SERVER_B
-            serverB_port = 4001;                        //@@@@@@@@@@@@@CHANGE TO PROPER VALUE FOR SERVER_B
+            serverB_Port = 4001;                        //@@@@@@@@@@@@@CHANGE TO PROPER VALUE FOR SERVER_B
         } catch (UnknownHostException | SocketException e) {
             System.out.println("Server address error.");
             e.printStackTrace();
@@ -43,7 +43,6 @@ public class Server_A {
     }
 
     // If replying to the client using the same packet info
-    // public static void sendMessage(Object[] message, byte[] byteMessage, DatagramPacket packet) {
     public static void sendMessage(Object[] message, DatagramPacket packet) {
         
         // Create packet and array to send data with
@@ -59,6 +58,7 @@ public class Server_A {
         }
 
         // Populate the packet and send the message
+        System.out.println("getSocketAddress: " + packet.getSocketAddress().toString());
         replyPacket = new DatagramPacket(replyDataServer, replyDataServer.length, packet.getSocketAddress());
         try {
             serverASocket.send(replyPacket);
@@ -69,15 +69,15 @@ public class Server_A {
     }
 
     // To send a message to a specific ip and port as opposed to a reply
-    public static void sendMessage(Object[] message, byte[] byteMessage, String ip, String port) {
-        // Create packet to use to reply with
-        DatagramPacket replyPacket = null;
+    public static void sendMessage(Object[] message, String ip, String port) {
 
-        byte[] replyDataServer = new byte[65535]; // TODO: Replace byteMessage with this variable, and remove it as an argument in the method
+        // Create packet and data array to use to reply with
+        DatagramPacket replyPacket = null;
+        byte[] replyDataServer = new byte[65535];
 
         // Serialize message first
         try {
-            byteMessage = serialize(message);
+            replyDataServer = serialize(message);
         } catch (IOException e) {
             System.out.println("Message not serialized.");
             e.printStackTrace();
@@ -86,10 +86,11 @@ public class Server_A {
         // Create packet with specific ip and port to send to 
         InetAddress sendIp = null;
         int portNumber = 9000;
+
         try {
             sendIp = InetAddress.getByName(ip);
             portNumber = Integer.parseInt(port);
-            replyPacket = new DatagramPacket(byteMessage, byteMessage.length, sendIp, portNumber);
+            replyPacket = new DatagramPacket(replyDataServer, replyDataServer.length, sendIp, portNumber);
         } catch (UnknownHostException e) {
             System.out.println("Server address error.");
             e.printStackTrace();
@@ -102,15 +103,17 @@ public class Server_A {
             System.out.println("Message not sent.");
             e.printStackTrace();
         }
-
     }
 
-    // Return subjects if they are from COEN
+    // Return subjects if they are from coen (doesn't matter if capitalized or not, AND subject can be changed)
     public static ArrayList<String> areSubject(ArrayList<String> clientSubjectList) {
+
         // Create an array of subjects which only accept COEN subjects
         ArrayList<String> acceptedSubjectList = new ArrayList<>();
+
         for (int i = 0; i < clientSubjectList.size(); i++) {
             String subject = clientSubjectList.get(i).toLowerCase();
+
             if (subject.contains("coen")) {
                 acceptedSubjectList.add(subject);
                 System.out.println("Subject: " + subject);
@@ -123,7 +126,10 @@ public class Server_A {
     // Start DB make sure to compile with: javac -cp <path/.jar file>: Server_A.java
     // Run DB with: java -cp <path/.jar file>: Server_A
     public static void restartDB() {
+        // Create instance of DB
         db_int = new DB_interface();
+
+        // Test if DB can connect
         try {
             db_int.connect();
             System.out.println("Initial SQL DB connection activated...");
@@ -194,8 +200,8 @@ public class Server_A {
                 // Receive server updated IP and socket
                 if (messageTypeReceived.equalsIgnoreCase("UPDATE-SERVER")) {
                     serverB_Address = InetAddress.getByName(messageListClient[1].toString());
-                    serverB_port = (int) messageListClient[2];
-                    System.out.println("IP Changed to: " + serverB_Address + " port: " + serverB_port);
+                    serverB_Port = (int) messageListClient[2];
+                    System.out.println("IP Changed to: " + serverB_Address + " port: " + serverB_Port);
                 }
 
                 // Add user to server
@@ -340,6 +346,8 @@ public class Server_A {
                             nameExists = false;
                         }
 
+                        // TODO: Check if subject already exists in DB for specific user
+
                         // Get list of subjects sent
                         ArrayList<String> subjectList = new ArrayList<>((ArrayList<String>) messageListClient[3]);
                         ArrayList<String> acceptedSubjectList = areSubject(subjectList);
@@ -479,7 +487,6 @@ public class Server_A {
 
                 // Send message to client
                 if (messageReplyClient != null) {
-                    // sendMessage(messageReplyClient, replyDataClient, receivePacket);
                     sendMessage(messageReplyClient, receivePacket);
                 }
                 replyDataClient = new byte[65535]; // Clear the buffer after every message
@@ -636,21 +643,21 @@ public class Server_A {
 
                 //--------------------------Send message to server B----------------------------------
                 if (messageReplyServer != null) {
+
                     // Don't send to server again
                     sendServerFlag = false;
 
-                    byte[] replyDataServer = new byte[65535];
-                    //TODO: Fix so it works with method
-                    //sendMessage(messageReplyServer, replyDataServer, serverB_Address.toString(), String.valueOf(serverB_port));
+                    // Split the address in case it is written as user/ip
+                    String[] serverAddressSplit = serverB_Address.toString().split("/");
 
-                    //--------------------------Remove if sendMessage works-------------------------
-                    replyDataServer = serialize(messageReplyServer);
-                    replyServerPacket = new DatagramPacket(replyDataServer, replyDataServer.length, serverB_Address, serverB_port);
-                    serverASocket.send(replyServerPacket);
-                    //--------------------------Remove if sendMessage works-------------------------
-
-
-                    replyDataServer = new byte[65535]; // Clear the buffer after every message
+                    // If address contains user/IP, split and take only IP
+                    if (serverAddressSplit.length > 1) {
+                        sendMessage(messageReplyServer, serverAddressSplit[1], String.valueOf(serverB_Port));
+                    } 
+                    // If address only contains IP
+                    else {
+                        sendMessage(messageReplyServer, serverAddressSplit[0], String.valueOf(serverB_Port));
+                    }
                 }
             }
         }
