@@ -5,7 +5,7 @@
 2. Run Server_A with 'java -cp mysql-connector-java-8.0.22/mysql-connector-java-8.0.22.jar: Server_A' in one terminal (Same process but for Server_B)
 3. Run Client with 'java Client' in another terminal
 4. Send message type 'REGISTER', 'UPDATE', etc. by typing it in the Client's terminal
-5. Exit program by typing 'BYE' in Client's terminal
+6. Exit server and client by using ctrl-c in their according terminal window
 
 # How to setup and Run DB
 1. From SQLWorkbench, press + symbol to add a server for "MySQL Connections"
