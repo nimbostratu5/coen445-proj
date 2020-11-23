@@ -87,6 +87,19 @@ public class Server_A {
         InetAddress sendIp = null;
         int portNumber = 9000;
 
+        // Split the address in case it is written as user/ip
+        String[] serverAddressSplit = ip.toString().split("/");
+
+        // If address contains user/IP, split and take only IP
+        if (serverAddressSplit.length > 1) {
+            ip = serverAddressSplit[1];
+        } 
+        // If address only contains IP
+        else {
+            ip = serverAddressSplit[0];
+        }
+
+        // Populate packet to send with
         try {
             sendIp = InetAddress.getByName(ip);
             portNumber = Integer.parseInt(port);
@@ -140,6 +153,8 @@ public class Server_A {
         }
     }
 
+
+    
     public static void main(String[] args) throws IOException, ClassNotFoundException {
 
         System.out.println("Starting Server...");
@@ -440,7 +455,7 @@ public class Server_A {
                                     }
                                 }
                                 
-                                // Skip sending message back to user publishing message
+                                // Skip sending message back to user publisher
                                 messageReplyClient = null;
                             }
                         }
@@ -647,17 +662,8 @@ public class Server_A {
                     // Don't send to server again
                     sendServerFlag = false;
 
-                    // Split the address in case it is written as user/ip
-                    String[] serverAddressSplit = serverB_Address.toString().split("/");
-
-                    // If address contains user/IP, split and take only IP
-                    if (serverAddressSplit.length > 1) {
-                        sendMessage(messageReplyServer, serverAddressSplit[1], String.valueOf(serverB_Port));
-                    } 
-                    // If address only contains IP
-                    else {
-                        sendMessage(messageReplyServer, serverAddressSplit[0], String.valueOf(serverB_Port));
-                    }
+                    // Send message to server
+                    sendMessage(messageReplyServer, serverB_Address.toString(), String.valueOf(serverB_Port));
                 }
             }
         }
