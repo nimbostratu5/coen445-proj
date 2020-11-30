@@ -2,8 +2,8 @@ import java.io.*;
 import java.net.*;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Enumeration;
 import java.util.Scanner;
-//to investigate: import java.util.logging.Logger;
 
 public class Client {
 
@@ -11,21 +11,25 @@ public class Client {
 
     /***********************    GLOBAL VARIABLES    ***********************/
 
-    public static final String name = "nimbostratus";
+    private static Logger logger = new Logger();
+    private static String username;
     private static int rqNum = 1;
     private static int client_port;
-    private static Logger logger = new Logger();
     private static DatagramSocket clientSocket;
+    private static InetAddress serverA;
+    private static InetAddress serverB;
+    private static int serverA_port;
+    private static int serverB_port;
+
     private static InetAddress currentServer;
-    private static int currentServer_port = 3000; // THIS WILL BE USED AS DEFAULT PORT FOR ALL SERVERS
+    private static int currentServer_port;
 
     static {
         try {
-            currentServer = InetAddress.getByName("192.168.1.123"); //TO BE CHANGED TO DISTINCT IP
             clientSocket = new DatagramSocket(0);
             client_port = clientSocket.getLocalPort();
-        } catch (UnknownHostException | SocketException e) {
-            System.out.println("Server address error.");
+        } catch (SocketException e ) {
+            System.out.println("DatagramSocket error");
             e.printStackTrace();
         }
     }
@@ -45,28 +49,100 @@ public class Client {
         return (Object[]) is.readObject();
     }
 
+    /***********************        GET MACHINE IP ADDRESS      ***********************/
+
+    private static String getIP() {
+        try {
+            Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
+            while (interfaces.hasMoreElements()) {
+                NetworkInterface iface = interfaces.nextElement();
+                if (iface.isLoopback() || !iface.isUp() || iface.isVirtual() || iface.isPointToPoint())
+                    continue;
+
+                Enumeration<InetAddress> addresses = iface.getInetAddresses();
+                while(addresses.hasMoreElements()) {
+                    InetAddress addr = addresses.nextElement();
+
+                    final String ip = addr.getHostAddress();
+                    if(Inet4Address.class == addr.getClass()) return ip;
+                }
+            }
+        } catch (SocketException e) {
+            throw new RuntimeException(e);
+        }
+        return null;
+    }
+
     /***********************        CLIENT APP      ***********************/
 
     public static void main(String[] args) throws IOException, ClassNotFoundException {
 
-        /*  TODO: NEED SOLUTION TO DETERMINE WHICH SERVER IS CURRENTLY SERVING
-         *    ANSWER: IF CLIENT SENDS TO NON-SERVING SERVER. LET THE NON-SERVING SERVER RE-DIRECT THE CLIENT.
-         *               1. NON-SERVING SERVER SENDS "CHANGE SERVER" MESSAGE TO CLIENT
-         *               2. CLIENT SILENTLY RE-SENDS MESSAGE TO SERVING SERVER.
-         */
 
-        System.out.println("Starting Client");
-        System.out.println("Server address is set to: "+ currentServer.toString() + " on port "+ currentServer_port);
-        System.out.println("The client is bound to port: "+client_port +" with IP address: " +clientSocket.getLocalSocketAddress());
-        logger.LogEvent("client started");
-        logger.LogEvent("current server is: " + currentServer.toString()+":"+currentServer_port);
+        System.out.println("\n\n*************** Client started ***************");
+        System.out.println("This client's IP is "+ getIP()  + " on port " + client_port);
+        System.out.println("**********************************************\n");
+        logger.logEvent("client started on " + getIP() + " on port " + client_port);
+
+        boolean validIP = false;
+        Scanner sc = new Scanner(System.in);
+        String[] address;
+
+        System.out.println("Enter Server_A IP:PORT (xxx.xxx.xxx.xxx:port#):");
+        while(!validIP) {
+            try {
+                address = sc.nextLine().split(":");
+                serverA = InetAddress.getByName(address[0]);
+                serverA_port = Integer.parseInt(address[1]);
+                validIP = true;
+
+            } catch (UnknownHostException e) {
+                System.out.println("Erroneous IP given for Server A. Try again:");
+            } catch (NumberFormatException n){
+                System.out.println("Erroneous port # given for Server A. Try again:");
+            }
+        }
+        logger.logEvent("server A IP:port is " + serverA.toString()+":"+serverA_port);
+        validIP = false;
+
+        System.out.println("\nEnter Server_B IP:PORT (xxx.xxx.xxx.xxx:port#):");
+        while(!validIP) {
+            try {
+                address = sc.nextLine().split(":");
+                serverB = InetAddress.getByName(address[0]);
+                serverB_port = Integer.parseInt(address[1]);
+                if((serverA!=serverB) && (serverA_port!=serverB_port)){
+                    validIP = true;
+                }
+                else{
+                    System.out.println("Servers are duplicate of each other!");
+                    throw new UnknownHostException();
+                }
+
+            } catch (UnknownHostException e) {
+                System.out.println("Erroneous IP:Port given for Server B. Try again:");
+            } catch (NumberFormatException n){
+                System.out.println("Erroneous port # given for Server B. Try again:");
+            }
+        }
+        logger.logEvent("server B IP:port is " + serverB.toString()+":"+serverB_port);
+
+        //System.out.println("ServerA: "+ serverA.getHostAddress() + " : " + serverA_port);
+        //System.out.println("ServerB: "+ serverB.getHostAddress() + " : " + serverB_port);
+
+        currentServer = serverA;
+        currentServer_port = serverA_port;
+        logger.logEvent("current server is: " + currentServer.toString()+":"+currentServer_port);
+
+        System.out.println("\nSetup complete!\n\nEnter your unique username:");
+        username = sc.nextLine();
+        logger.logEvent("user is " + username);
+
 
         /*  USER PROMPT */
         Object[] message = null;
         String messageType;
         boolean bye = false;
         System.out.println("Input a command");
-        Scanner sc = new Scanner(System.in);
         label:
         while (!bye) {
             if (sc.hasNextLine()) {
@@ -85,22 +161,22 @@ public class Client {
                         message = new Object[5];
                         message[0] = messageType;
                         message[1] = rqNum++;
-                        message[2] = name;
-                        message[3] = "123.456.789.0"; //fake ip
-                        message[4] = clientSocket.getPort();
+                        message[2] = username;
+                        message[3] = getIP();
+                        message[4] = client_port;
                         break;
 
                     case "DE-REGISTER":
                         message = new Object[2];
                         message[0] = messageType;
-                        message[1] = name;
+                        message[1] = username;
                         break;
 
                     case "SUBJECTS":
                         message = new Object[5];
                         message[0] = messageType;
                         message[1] = rqNum++;
-                        message[2] = name;
+                        message[2] = username;
                         String input = sc.next();
                         String[] splitter = input.split("\\s+");
                         ArrayList<String> subjectList = new ArrayList<>(Arrays.asList(splitter));
@@ -111,7 +187,7 @@ public class Client {
                         message = new Object[5];
                         message[0] = messageType;
                         message[1] = rqNum++;
-                        message[2] = name;
+                        message[2] = username;
                         System.out.print("Subject: ");
                         message[3] = sc.next();
                         System.out.println("Input text:");
@@ -120,49 +196,51 @@ public class Client {
                         break;
 
                     case "LOG":
-                        logger.DisplayLog();
+                        logger.displayLog();
+                        break;
 
+                    default:
+                        System.out.println("Unkown message type. Available options are REGISTER, DE-REGISTER, UPDATE, PUBLISH, SUBJECTS.\nLOG to display the log file, and BYE to close session.");
                 }
-                
-                sendMessage(message);
+                sendMessage(message,currentServer,currentServer_port);
             }
         }
 
         /*  CLOSE SOCKET -- USER LOGOUT -- CLOSE SESSION  */
         clientSocket.close();
-        System.out.println("Client session closed.");
-        logger.LogEvent("client closed application.");
+        System.out.println("\n\n*************** Client Session Closed ***************\n");
+        logger.logEvent("client closed application.");
 
     }
 
-    private static void sendMessage(Object[] message ) throws IOException, ClassNotFoundException   {
+    private static void sendMessage(Object[] message, InetAddress cS, int cSp ) throws IOException, ClassNotFoundException   {
         if (message != null) {
 
             byte[] sendData = new byte[1024];
             byte[] receiveData = new byte[1024];
-
+            System.out.println(cS.toString() +":"+cSp);
             /*  SEND THE MESSAGE TO CURRENT SERVER  */
             sendData = serialize(message);
-            DatagramPacket sendPacket  = new DatagramPacket(sendData,sendData.length,currentServer,currentServer_port);
+            DatagramPacket sendPacket  = new DatagramPacket(sendData,sendData.length,cS,cSp);
 
             try {
                 clientSocket.send(sendPacket);
             } catch (IOException e) {
                 System.out.println("Message not sent.");
-                logger.LogEvent("message failed to be sent");
+                logger.logEvent("message failed to be sent");
                 e.printStackTrace();
             }
 
             System.out.println("Sent! Awaiting server response...");
-            logger.LogEvent("user "+name+" sent a msg of type "+ message[0].toString() +" to server");// TODO: 2020-11-08 which server?
+            logger.logEvent("user "+username+" sent a msg of type "+ message[0].toString() +" to server");// TODO: 2020-11-08 which server?
 
             /*  RECEIVING  */
 
             try {
-                clientSocket.setSoTimeout(10000);
+                clientSocket.setSoTimeout(50000);
             } catch (SocketException e) {
                 System.out.println("Server has not responded within 10s");
-                logger.LogEvent("client timed-out. Server "+ currentServer.toString() +" is not responding.");
+                logger.logEvent("client timed-out. Server "+ currentServer.toString() +" is not responding.");
                 e.printStackTrace();
             }
 
@@ -171,83 +249,90 @@ public class Client {
                 clientSocket.receive(receivePacket);
             } catch (IOException e) {
                 System.out.println("packet problem when receiving");
-                logger.LogEvent("client socket receiving packet error");
+                logger.logEvent("client socket receiving packet error");
                 e.printStackTrace();
             }
             receiveData = receivePacket.getData();
             Object[] receivedMsg = deserialize(receiveData);
             //System.out.println(receivedMsg[0].toString());
-            logger.LogEvent("received a message of type "+ receivedMsg[0].toString()+" from server ");
+            logger.logEvent("received a message of type "+ receivedMsg[0].toString()+" from server ");
 
             switch (receivedMsg[0].toString()) {
 
                 case "REGISTERED":
                     System.out.println("RQ#" + receivedMsg[1].toString() + ": Registered to Server");
-                    logger.LogEvent("RQ#"+receivedMsg[1].toString() + " processed successfully." + name+" is registered to server");
+                    logger.logEvent("RQ#"+receivedMsg[1].toString() + " processed successfully." + username+" is registered to server");
+                    break;
 
                 case "REGISTER-DENIED":
                     System.out.println("RQ#" + receivedMsg[1].toString() + ": registration denied: "+receivedMsg[2].toString());
-                    logger.LogEvent("RQ#" + receivedMsg[1].toString() + ": registration denied: "+receivedMsg[2].toString());
+                    logger.logEvent("RQ#" + receivedMsg[1].toString() + ": registration denied: "+receivedMsg[2].toString());
+                    break;
 
                             /* TODO:  Upon reception of REGISTER-DENIED, the user will give up for a little while before
                                 retrying again depending on the reason. (?)*/
 
                 case "DE-REGISTER":
                     System.out.println( "You have been de-registered from the server.");
-                    logger.LogEvent("user " + name + " has been de-registered from the server");
-
+                    logger.logEvent("user " + username + " has been de-registered from the server");
+                    break;
                     //do we need to do anything in the local database?
 
                 case "UPDATE-CONFIRMED":
                     System.out.println("Your info (ip/socket#) have been updated. [RQ#"+receivedMsg[1].toString()+"]");
-                    logger.LogEvent("client ip/socket updated to: " + receivedMsg[3] +":"+receivedMsg[4]);
+                    logger.logEvent("client ip/socket updated to: " + receivedMsg[3] +":"+receivedMsg[4]);
                     break;
 
                 case "UPDATE-DENIED":
                     System.out.println("Update denied [RQ#"+receivedMsg[1].toString()+"]:"+ receivedMsg[2].toString());
-                    logger.LogEvent("client ip/socket updated to: " + receivedMsg[3] +":"+receivedMsg[4]);
+                    logger.logEvent("client ip/socket updated to: " + receivedMsg[3] +":"+receivedMsg[4]);
                     break;
 
                 case "SUBJECTS-UPDATED":
                     System.out.println( "Your subjects have been updated [RQ#"+receivedMsg[1].toString()+"]");
                     //TODO: list the subjects & update local database?
-                    logger.LogEvent("subjects have been updated.");
+                    logger.logEvent("subjects have been updated.");
                     break;
 
                 case "SUBJECTS-REJECTED":
                     //for what reason would it get rejected...
                     System.out.println( "Your subjects have NOT been updated [RQ#"+receivedMsg[1].toString()+"]");
-                    logger.LogEvent("subjects update request rejected.");
+                    logger.logEvent("subjects update request rejected.");
                     break;
 
                 case "MESSAGE":
-                    if(receivedMsg[1].toString().equals(name)){
+                    if(receivedMsg[1].toString().equals(username)){
                         System.out.println( "Your message on "+ receivedMsg[2].toString()+" was published.");
                         //TODO: update local database?
-                        logger.LogEvent("client has published a message");
+                        logger.logEvent("client has published a message");
                     }
                     else {
                         System.out.println( "Message received from " + receivedMsg[1].toString() +" on " + receivedMsg[2].toString()+" :");
                         //TODO: display text + update local database?
-                        logger.LogEvent("client has received message from "+ receivedMsg[1].toString());
+                        logger.logEvent("client has received message from "+ receivedMsg[1].toString());
                     }
                     break;
 
                 case "PUBLISH-DENIED":
                     System.out.println( "Your message RQ#"+ receivedMsg[1].toString()+" was not published: "+ receivedMsg[2].toString());
-                    logger.LogEvent("client message publish was denied [RQ#"+ receivedMsg[1].toString() +"]");
+                    logger.logEvent("client message publish was denied [RQ#"+ receivedMsg[1].toString() +"]");
                     break;
 
                 case "CHANGE-SERVER":
                     currentServer = InetAddress.getByName(receivedMsg[1].toString());
                     currentServer_port = (int)receivedMsg[2];
-                    logger.LogEvent("server has been changed to: "+ currentServer.toString() + ":"+currentServer_port);
+                    logger.logEvent("server has been changed to: "+ currentServer.toString() + ":"+currentServer_port);
+                    break;
 
                 case "ACK": //for testing purposes
                     System.out.println("received: "+receivedMsg[0].toString() +"\nServer says: " + receivedMsg[1].toString());
                     System.out.println();
+                    break;
+
+                default:
+                    System.out.println("Unknown message received.");
+                    logger.logEvent("received message with unknown type.");
             }
         }
     }
-
 }
