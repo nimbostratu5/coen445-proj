@@ -11,7 +11,7 @@ public class Client {
 
     /***********************    GLOBAL VARIABLES    ***********************/
 
-    private static Logger logger = new Logger();
+    private static Logger logger;
     private static String username;
     private static int rqNum = 1;
     private static int client_port;
@@ -77,7 +77,9 @@ public class Client {
 
     public static void main(String[] args) throws IOException, ClassNotFoundException {
 
-
+        Logger logger = new Logger();
+        logger.createFile("clientlog");
+        logger.logEvent("log file created.");
         System.out.println("\n\n*************** Client started ***************");
         System.out.println("This client's IP is "+ getIP()  + " on port " + client_port);
         System.out.println("**********************************************\n");
@@ -202,6 +204,7 @@ public class Client {
                     default:
                         System.out.println("Unkown message type. Available options are REGISTER, DE-REGISTER, UPDATE, PUBLISH, SUBJECTS.\nLOG to display the log file, and BYE to close session.");
                 }
+
                 sendMessage(message,currentServer,currentServer_port);
             }
         }
@@ -217,18 +220,33 @@ public class Client {
         if (message != null) {
 
             byte[] sendData = new byte[1024];
-            byte[] receiveData = new byte[1024];
-            System.out.println(cS.toString() +":"+cSp);
-            /*  SEND THE MESSAGE TO CURRENT SERVER  */
+            byte[] receiveData = new byte[1024];            
             sendData = serialize(message);
-            DatagramPacket sendPacket  = new DatagramPacket(sendData,sendData.length,cS,cSp);
 
-            try {
-                clientSocket.send(sendPacket);
-            } catch (IOException e) {
-                System.out.println("Message not sent.");
-                logger.logEvent("message failed to be sent");
-                e.printStackTrace();
+            if(message[0].toString().equals("REGISTER")){
+                /*  SEND THE MESSAGE TO THE 2 SERVERS  */
+                DatagramPacket sendPacket  = new DatagramPacket(sendData,sendData.length,serverA,serverA_port);
+                DatagramPacket sendPacket2  = new DatagramPacket(sendData,sendData.length,serverB,serverB_port);
+                try {
+                    clientSocket.send(sendPacket);
+                    clientSocket.send(sendPacket2);
+                } catch (IOException e) {
+                    System.out.println("Message not sent.");
+                    logger.logEvent("message failed to be sent");
+                    e.printStackTrace();
+                }
+
+            }
+            else{
+                /*  SEND THE MESSAGE TO CURRENT SERVER  */
+                DatagramPacket sendPacket  = new DatagramPacket(sendData,sendData.length,cS,cSp);            
+                try {
+                    clientSocket.send(sendPacket);
+                } catch (IOException e) {
+                    System.out.println("Message not sent.");
+                    logger.logEvent("message failed to be sent");
+                    e.printStackTrace();
+                }
             }
 
             System.out.println("Sent! Awaiting server response...");
@@ -267,6 +285,8 @@ public class Client {
                 case "REGISTER-DENIED":
                     System.out.println("RQ#" + receivedMsg[1].toString() + ": registration denied: "+receivedMsg[2].toString());
                     logger.logEvent("RQ#" + receivedMsg[1].toString() + ": registration denied: "+receivedMsg[2].toString());
+                    System.out.println("Would you like to re-send your message? y/n");
+                    
                     break;
 
                             /* TODO:  Upon reception of REGISTER-DENIED, the user will give up for a little while before
