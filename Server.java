@@ -75,6 +75,7 @@ public class Server {
         Thread siThread = new Thread(serverInterrupt);
         siThread.start();
 
+        restartDB();
 
         while(!shutdown){
 

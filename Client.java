@@ -11,7 +11,7 @@ public class Client {
 
     /***********************    GLOBAL VARIABLES    ***********************/
 
-    private static Logger logger;
+    public static Logger logger;
     private static String username;
     private static int rqNum = 1;
     private static int client_port;
@@ -79,7 +79,6 @@ public class Client {
 
         Logger logger = new Logger();
         logger.createFile("clientlog");
-        logger.logEvent("log file created.");
         System.out.println("\n\n*************** Client started ***************");
         System.out.println("This client's IP is "+ getIP()  + " on port " + client_port);
         System.out.println("**********************************************\n");
@@ -206,7 +205,7 @@ public class Client {
                         System.out.println("Unkown message type. Available options are REGISTER, DE-REGISTER, UPDATE, PUBLISH, SUBJECTS.\nLOG to display the log file, and BYE to close session.");
                 }
 
-                sendMessage(message,currentServer,currentServer_port);
+                sendMessage(message,currentServer,currentServer_port,logger);
             }
         }
 
@@ -217,7 +216,7 @@ public class Client {
 
     }
 
-    private static void sendMessage(Object[] message, InetAddress cS, int cSp ) throws IOException, ClassNotFoundException   {
+    private static void sendMessage(Object[] message, InetAddress cS, int cSp, Logger logger ) throws IOException, ClassNotFoundException   {
         if (message != null) {
 
             byte[] sendData = new byte[1024];
@@ -250,7 +249,7 @@ public class Client {
                 }
             }
 
-            System.out.println("Sent! Awaiting server response...");
+            System.out.println("RQ#"+rqNum+" sent! Awaiting server response...");
             logger.logEvent("user "+username+" sent a msg of type "+ message[0].toString() +" to server");// TODO: 2020-11-08 which server?
 
             /*  RECEIVING  */
@@ -286,7 +285,7 @@ public class Client {
                 case "REGISTER-DENIED":
                     System.out.println("RQ#" + receivedMsg[1].toString() + ": registration denied: "+receivedMsg[2].toString());
                     logger.logEvent("RQ#" + receivedMsg[1].toString() + ": registration denied: "+receivedMsg[2].toString());
-                    System.out.println("Would you like to re-send your message? y/n");
+                    //System.out.println("Would you like to re-send your message? y/n");
                     
                     break;
 
