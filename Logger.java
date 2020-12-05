@@ -30,7 +30,7 @@ public class Logger {
             LocalDateTime myDateObj = LocalDateTime.now();
             DateTimeFormatter myFormatObj = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss");
             String formattedDate = myDateObj.format(myFormatObj);
-            FileWriter writer = new FileWriter(myObj.getName()+".txt", true);
+            FileWriter writer = new FileWriter(myObj.getName(), true);
             writer.write(formattedDate+": "+event);
             writer.write("\r\n");   // write new line
             writer.close();

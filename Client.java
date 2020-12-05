@@ -169,9 +169,10 @@ public class Client {
                         break;
 
                     case "DE-REGISTER":
-                        message = new Object[2];
+                        message = new Object[3];
                         message[0] = messageType;
-                        message[1] = username;
+                        message[1] = rqNum++;
+                        message[2] = username;
                         break;
 
                     case "SUBJECTS":

@@ -344,7 +344,11 @@ public class Worker implements Runnable{
             }
 
             if (replyMsgClient != null) {
-                //sendMessage(replyMsgClient, clientSocket);
+                try {
+                    sendMessage(replyMsgClient, clientIP,clientPort);
+                } catch (UnknownHostException e) {
+                    e.printStackTrace();
+                }
             }
 
             if(replyMsgServer != null){
