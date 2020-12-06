@@ -55,7 +55,6 @@ public class Worker implements Runnable{
     }
 
     public static void sendMessage(Object[] message, String ip, int port) throws UnknownHostException {
-
         byte[] replyDataServer = new byte[65535];
         // Serialize the message into data
         try {
@@ -99,9 +98,13 @@ public class Worker implements Runnable{
         Object[] replyMsgServer = null;
 
         if(serverUpdate){
-            replyMsgClient = new Object[3];
+            replyMsgServer = new Object[3];
+            replyMsgServer[0] = "UPDATE-SERVER";
+            replyMsgServer[1] = Server.getIP();
+            replyMsgServer[2] = serverSocket.getLocalPort();
+
             try {
-                sendMessage(replyMsgClient,otherServerIP,otherServerPort);
+                sendMessage(replyMsgServer,otherServerIP,otherServerPort);
             } catch (UnknownHostException e) {
                 e.printStackTrace();
             }
@@ -293,11 +296,16 @@ public class Worker implements Runnable{
 
 
                 case "UPDATE-SERVER":
-                    //update the IP/Port of other server
-
-                    //serverB_Address = InetAddress.getByName(messageListClient[1].toString());
-                    //serverB_Port = (int) messageListClient[2];
-                    //System.out.println("IP Changed to: " + serverB_Address + " port: " + serverB_Port);
+                    Server.otherServerIP = receivedMsg[1].toString();
+                    Server.otherServerPort = (int)receivedMsg[2];
+                    System.out.println(("Other server IP:Port were updated to "+ receivedMsg[1].toString() +":"+receivedMsg[2].toString()));
+                    try {
+                        logSem.acquire();
+                        Server.logger.logEvent("Other server IP:Port were updated to "+ receivedMsg[1].toString() +":"+receivedMsg[2].toString());
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                    logSem.release();
                     break;
 
                 case "REGISTERED":

@@ -146,6 +146,7 @@ public class Client {
         System.out.println("Input a command");
         label:
         while (!bye) {
+            message = null;
             if (sc.hasNextLine()) {
                 messageType = sc.next();
 
@@ -179,6 +180,7 @@ public class Client {
                         message[0] = messageType;
                         message[1] = rqNum++;
                         message[2] = username;
+                        System.out.println("List of subjects: ");
                         String input = sc.next();
                         String[] splitter = input.split("\\s+");
                         ArrayList<String> subjectList = new ArrayList<>(Arrays.asList(splitter));
@@ -255,104 +257,104 @@ public class Client {
             /*  RECEIVING  */
 
             try {
-                clientSocket.setSoTimeout(50000);
+                clientSocket.setSoTimeout(10000);
             } catch (SocketException e) {
-                System.out.println("Server has not responded within 10s");
-                logger.logEvent("client timed-out. Server "+ currentServer.toString() +" is not responding.");
                 e.printStackTrace();
             }
 
             DatagramPacket receivePacket = new DatagramPacket(receiveData,receiveData.length);
             try {
                 clientSocket.receive(receivePacket);
+                receiveData = receivePacket.getData();
+                Object[] receivedMsg = deserialize(receiveData);
+                //System.out.println(receivedMsg[0].toString());
+                logger.logEvent("received a message of type "+ receivedMsg[0].toString()+" from server ");
+
+                switch (receivedMsg[0].toString()) {
+
+                    case "REGISTERED":
+                        System.out.println("RQ#" + receivedMsg[1].toString() + ": Registered to Server");
+                        logger.logEvent("RQ#"+receivedMsg[1].toString() + " processed successfully." + username+" is registered to server");
+                        break;
+
+                    case "REGISTER-DENIED":
+                        System.out.println("RQ#" + receivedMsg[1].toString() + ": registration denied: "+receivedMsg[2].toString());
+                        logger.logEvent("RQ#" + receivedMsg[1].toString() + ": registration denied: "+receivedMsg[2].toString());
+                        //System.out.println("Would you like to re-send your message? y/n");
+                        
+                        break;
+
+                                /* TODO:  Upon reception of REGISTER-DENIED, the user will give up for a little while before
+                                    retrying again depending on the reason. (?)*/
+
+                    case "DE-REGISTER":
+                        System.out.println( "You have been de-registered from the server.");
+                        logger.logEvent("user " + username + " has been de-registered from the server");
+                        break;
+                        //do we need to do anything in the local database?
+
+                    case "UPDATE-CONFIRMED":
+                        System.out.println("Your info (ip/socket#) have been updated. [RQ#"+receivedMsg[1].toString()+"]");
+                        logger.logEvent("client ip/socket updated to: " + receivedMsg[3] +":"+receivedMsg[4]);
+                        break;
+
+                    case "UPDATE-DENIED":
+                        System.out.println("Update denied [RQ#"+receivedMsg[1].toString()+"]:"+ receivedMsg[2].toString());
+                        logger.logEvent("client ip/socket updated to: " + receivedMsg[3] +":"+receivedMsg[4]);
+                        break;
+
+                    case "SUBJECTS-UPDATED":
+                        System.out.println( "Your subjects have been updated [RQ#"+receivedMsg[1].toString()+"]");
+                        //TODO: list the subjects & update local database?
+                        logger.logEvent("subjects have been updated.");
+                        break;
+
+                    case "SUBJECTS-REJECTED":
+                        //for what reason would it get rejected...
+                        System.out.println( "Your subjects have NOT been updated [RQ#"+receivedMsg[1].toString()+"]");
+                        logger.logEvent("subjects update request rejected.");
+                        break;
+
+                    case "MESSAGE":
+                        if(receivedMsg[1].toString().equals(username)){
+                            System.out.println( "Your message on "+ receivedMsg[2].toString()+" was published.");
+                            //TODO: update local database?
+                            logger.logEvent("client has published a message");
+                        }
+                        else {
+                            System.out.println( "Message received from " + receivedMsg[1].toString() +" on " + receivedMsg[2].toString()+" :");
+                            //TODO: display text + update local database?
+                            logger.logEvent("client has received message from "+ receivedMsg[1].toString());
+                        }
+                        break;
+
+                    case "PUBLISH-DENIED":
+                        System.out.println( "Your message RQ#"+ receivedMsg[1].toString()+" was not published: "+ receivedMsg[2].toString());
+                        logger.logEvent("client message publish was denied [RQ#"+ receivedMsg[1].toString() +"]");
+                        break;
+
+                    case "CHANGE-SERVER":
+                        currentServer = InetAddress.getByName(receivedMsg[1].toString());
+                        currentServer_port = (int)receivedMsg[2];
+                        logger.logEvent("server has been changed to: "+ currentServer.toString() + ":"+currentServer_port);
+                        break;
+
+                    case "ACK": //for testing purposes
+                        System.out.println("received: "+receivedMsg[0].toString() +"\nServer says: " + receivedMsg[1].toString());
+                        System.out.println();
+                        break;
+
+                    default:
+                        System.out.println("Unknown message received.");
+                        logger.logEvent("received message with unknown type.");
+                }
+                
             } catch (IOException e) {
-                System.out.println("packet problem when receiving");
-                logger.logEvent("client socket receiving packet error");
-                e.printStackTrace();
+                System.out.println("Timed-out. Server has not responded. Try again!");
+                logger.logEvent("client timed-out. Server "+ currentServer.toString() +" is not responding.");
+                //e.printStackTrace();
             }
-            receiveData = receivePacket.getData();
-            Object[] receivedMsg = deserialize(receiveData);
-            //System.out.println(receivedMsg[0].toString());
-            logger.logEvent("received a message of type "+ receivedMsg[0].toString()+" from server ");
-
-            switch (receivedMsg[0].toString()) {
-
-                case "REGISTERED":
-                    System.out.println("RQ#" + receivedMsg[1].toString() + ": Registered to Server");
-                    logger.logEvent("RQ#"+receivedMsg[1].toString() + " processed successfully." + username+" is registered to server");
-                    break;
-
-                case "REGISTER-DENIED":
-                    System.out.println("RQ#" + receivedMsg[1].toString() + ": registration denied: "+receivedMsg[2].toString());
-                    logger.logEvent("RQ#" + receivedMsg[1].toString() + ": registration denied: "+receivedMsg[2].toString());
-                    //System.out.println("Would you like to re-send your message? y/n");
-                    
-                    break;
-
-                            /* TODO:  Upon reception of REGISTER-DENIED, the user will give up for a little while before
-                                retrying again depending on the reason. (?)*/
-
-                case "DE-REGISTER":
-                    System.out.println( "You have been de-registered from the server.");
-                    logger.logEvent("user " + username + " has been de-registered from the server");
-                    break;
-                    //do we need to do anything in the local database?
-
-                case "UPDATE-CONFIRMED":
-                    System.out.println("Your info (ip/socket#) have been updated. [RQ#"+receivedMsg[1].toString()+"]");
-                    logger.logEvent("client ip/socket updated to: " + receivedMsg[3] +":"+receivedMsg[4]);
-                    break;
-
-                case "UPDATE-DENIED":
-                    System.out.println("Update denied [RQ#"+receivedMsg[1].toString()+"]:"+ receivedMsg[2].toString());
-                    logger.logEvent("client ip/socket updated to: " + receivedMsg[3] +":"+receivedMsg[4]);
-                    break;
-
-                case "SUBJECTS-UPDATED":
-                    System.out.println( "Your subjects have been updated [RQ#"+receivedMsg[1].toString()+"]");
-                    //TODO: list the subjects & update local database?
-                    logger.logEvent("subjects have been updated.");
-                    break;
-
-                case "SUBJECTS-REJECTED":
-                    //for what reason would it get rejected...
-                    System.out.println( "Your subjects have NOT been updated [RQ#"+receivedMsg[1].toString()+"]");
-                    logger.logEvent("subjects update request rejected.");
-                    break;
-
-                case "MESSAGE":
-                    if(receivedMsg[1].toString().equals(username)){
-                        System.out.println( "Your message on "+ receivedMsg[2].toString()+" was published.");
-                        //TODO: update local database?
-                        logger.logEvent("client has published a message");
-                    }
-                    else {
-                        System.out.println( "Message received from " + receivedMsg[1].toString() +" on " + receivedMsg[2].toString()+" :");
-                        //TODO: display text + update local database?
-                        logger.logEvent("client has received message from "+ receivedMsg[1].toString());
-                    }
-                    break;
-
-                case "PUBLISH-DENIED":
-                    System.out.println( "Your message RQ#"+ receivedMsg[1].toString()+" was not published: "+ receivedMsg[2].toString());
-                    logger.logEvent("client message publish was denied [RQ#"+ receivedMsg[1].toString() +"]");
-                    break;
-
-                case "CHANGE-SERVER":
-                    currentServer = InetAddress.getByName(receivedMsg[1].toString());
-                    currentServer_port = (int)receivedMsg[2];
-                    logger.logEvent("server has been changed to: "+ currentServer.toString() + ":"+currentServer_port);
-                    break;
-
-                case "ACK": //for testing purposes
-                    System.out.println("received: "+receivedMsg[0].toString() +"\nServer says: " + receivedMsg[1].toString());
-                    System.out.println();
-                    break;
-
-                default:
-                    System.out.println("Unknown message received.");
-                    logger.logEvent("received message with unknown type.");
-            }
+            
         }
     }
 }

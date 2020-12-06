@@ -17,6 +17,8 @@ public class Server {
 
     public static Logger logger;
     public static DatagramSocket serverSocket;
+    public static String serverName;
+    public static int serverPort;
     public static int otherServerPort;
     public static String otherServerIP;
 
@@ -34,10 +36,6 @@ public class Server {
         logSem = new Semaphore(1, true);
 
         logger = new Logger();
-        int port;
-        int otherServerPort;
-        String otherServerIP;
-        String serverName;
 
         Scanner sc = new Scanner(System.in);
 
@@ -46,36 +44,32 @@ public class Server {
         serverName = sc.nextLine();
         logger.createFile(serverName);
         System.out.print("Enter " + serverName + " port #: ");
-        port = sc.nextInt();
+        serverPort = sc.nextInt();
         sc.nextLine();
 
-        //System.out.println("Is "+serverName+" serving first? y/n:");
+        System.out.print("Enter the other server's IP: ");
+        otherServerIP = sc.nextLine();
+        System.out.print("Enter the other server's port #: ");
+        otherServerPort = sc.nextInt();
 
-       // System.out.print("Enter the other server's IP: ");
-       // otherServerIP = sc.nextLine();
-        otherServerIP = "192.168.0.13";
-       // System.out.print("Enter the other server's port #: ");
-       // otherServerPort = sc.nextInt();
-        otherServerPort=2000;
-       // sc.nextLine();
+        sc.nextLine();
 
         System.out.println("Is this server serving first? y/n");
         String in = sc.nextLine();
         if(in.equals("y")) {
             isServing.set(true);
         }
-        System.out.println("Setup complete. "+serverName + " has been created with IP " + getIP() + ":" + port);
+        restartDB();
+        System.out.println("Setup complete. "+serverName + " has been created with IP " + getIP() + ":" + serverPort);
         System.out.println("************************************************\n");
 
         byte[] receiveData = new byte[65535];
-        serverSocket = new DatagramSocket(port);
+        serverSocket = new DatagramSocket(serverPort);
 
         //serverInterrupt gets user input from terminal to UPDATE-SERVER or to SHUTDOWN the server.
         ServerInterrupt serverInterrupt = new ServerInterrupt(sc);
         Thread siThread = new Thread(serverInterrupt);
         siThread.start();
-
-        restartDB();
 
         while(!shutdown){
 
@@ -102,22 +96,25 @@ public class Server {
         threadPool.shutdown();
         serverSocket.close();
         siThread.join();
+        System.out.println("Good Bye!");
+
     }
 
     public static void updateServer(String newIP, int newPort) throws SocketException, InterruptedException, UnknownHostException {
         System.out.println("Closing current socket...");
         busy = true;
         System.out.println("Checking if workers have finished their tasks...");
-        if(threadPool.awaitTermination(2000, TimeUnit.MILLISECONDS))
-            System.out.println("All workers have finished their tasks.");
-            threadPool.shutdown();
-            serverSocket.close();
-            serverSocket = new DatagramSocket(newPort);
-            threadPool = Executors.newFixedThreadPool(numThreads);
+        threadPool.awaitTermination(5000, TimeUnit.MILLISECONDS);
+        System.out.println("All workers have finished their tasks.");
+        threadPool.shutdown();
+        serverSocket.close();
+        serverSocket = new DatagramSocket(newPort);
+        threadPool = Executors.newFixedThreadPool(numThreads);
 
-            threadPool.execute(new Worker(otherServerIP,otherServerPort,serverSocket,logSem));
-            busy = false;
-            System.out.println("Server socket has been updated to: "+newIP+":"+serverSocket.getLocalPort());
+        threadPool.execute(new Worker(otherServerIP, otherServerPort, serverSocket, logSem));
+        busy = false;
+        System.out.println("Server socket has been updated to: " + newIP + ":" + serverSocket.getLocalPort());
+
     }
 
     public static void shutdownServer(){
@@ -130,7 +127,7 @@ public class Server {
         logger.displayLog();
     }
 
-    private static String getIP() {
+    public static String getIP() {
         try {
             Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
               while (interfaces.hasMoreElements()) {
