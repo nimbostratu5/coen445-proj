@@ -400,8 +400,6 @@ public class Server_A {
 
                 // Send message to users with subject of interest ONE SUBJECT PUBLISHED AT A TIME
                 else if (messageTypeReceived.equalsIgnoreCase("PUBLISH")) {
-
-                    /*
                     try {
                         db_int.connect();
 
@@ -418,40 +416,49 @@ public class Server_A {
                         String subject = messageListClient[3].toString();
                         String text = messageListClient[4].toString();
 
+                        // Get subject ID from the list of all subjects
+                        int subjectId = -1;
+                        ArrayList<String[]> subjectList = db_int.getAllExistingSubjects();
+
+                        for (int i = 0; i < subjectList.size(); i++) {
+                            int tempId = Integer.parseInt(subjectList.get(i)[0]);
+                            String tempSubject = subjectList.get(i)[1];
+
+                            if (subject.equals(tempSubject)) {
+                                subjectId = tempId;
+                                break;
+                            }
+                        }
+
                         // Get all users subscribed to the subject of interest
-                        // TODO: GET THIS FIXED WITH ION AND THEN UNCOMMENT
-                        ArrayList<String[]> usersSubscribed = db_int.getAllUsersSubscribed(subject);
+                        ArrayList<String[]> usersSubscribed = db_int.getAllUsersSubscribed(subjectId);
 
                         // If the client sender is registered and if there are users subscribed to the subject
-                        if (nameExists && usersSubscribed.size() > 0) {
+                        if (nameExists && usersSubscribed.size() > 0 && usersSubscribed != null && subjectId != -1) {
 
-                            // If there are users subscribed to the subject of interest
-                            if (usersSubscribed.size() > 0) {
+                            // For each user subscribed to the subject, send them a message
+                            for (int i = 0; i < usersSubscribed.size(); i++) {
 
-                                // For each user subscribed to the subject, send them a message
-                                for (int i = 0; i < usersSubscribed.size(); i++) {
+                                // Get the subscribed user's name and address to send to
+                                String name = usersSubscribed.get(i)[0];
+                                String fullAddress = usersSubscribed.get(i)[1];
+                                String[] addressSplit = fullAddress.split(":"); // IP[0] and Port[1]
 
-                                    // Get the subscribed user's name and address to send to
-                                    String name = usersSubscribed.get(i)[0];
-                                    String fullAddress = usersSubscribed.get(i)[1];
-                                    String[] addressSplit = fullAddress.split(":"); // IP[0] and Port[1]
+                                // Create message to send to the subscribed user
+                                messageReplyClient = new Object[4];
+                                messageReplyClient[0] = "MESSAGE";
+                                messageReplyClient[1] = name;
+                                messageReplyClient[2] = subject;
+                                messageReplyClient[3] = text;
 
-                                    // Create message to send to the subscribed user
-                                    messageReplyClient = new Object[4];
-                                    messageReplyClient[0] = "MESSAGE";
-                                    messageReplyClient[1] = name;
-                                    messageReplyClient[2] = subject;
-                                    messageReplyClient[3] = text;
-
-                                    // Send message
-                                    if (messageReplyClient != null) {
-                                        sendMessage(messageReplyClient, replyDataClient, addressSplit[0], addressSplit[1]);
-                                    }
+                                // Send message
+                                if (messageReplyClient != null) {
+                                    sendMessage(messageReplyClient, addressSplit[0], addressSplit[1]);
                                 }
-                                
-                                // Skip sending message back to user publisher
-                                messageReplyClient = null;
                             }
+                            
+                            // Skip sending message back to user publisher
+                            messageReplyClient = null;
                         }
                         
                         // If sender isn't registered 
@@ -475,14 +482,11 @@ public class Server_A {
                     } catch (SQLException e) {
                         e.printStackTrace();
                     }
-                    */
-
                 }
 
                 // TODO: Implement timer to set serverActive to true or false based on time and serverSwap to true
                 // TODO: Change this so that this is executable directly from file itself without needing user input
                 //@@@@@@@@@@@@@@@@@@@@@@@@Important to change SOCKET to 3000 if on server_B@@@@@@@@@@@@@@@@@@@@@
-                
                 // Change server to receive client data.
                 else if (messageTypeReceived.equalsIgnoreCase("CHANGE-SERVER")) {
                     //if (name exists)
