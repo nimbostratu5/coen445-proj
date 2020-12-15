@@ -13,6 +13,10 @@ public class DB_interface{
 	private final String [] CREDENTIALS = new String [] {"admin","COEN4452020"};
 	
 	private Connection connection;
+
+	public DB_interface(String database_name){
+		dbName = database_name;
+	}
 	
 	// Connect to the DB
 	public void connect() throws SQLException{
