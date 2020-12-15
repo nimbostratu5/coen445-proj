@@ -484,6 +484,40 @@ public class Server_A {
                     }
                 }
 
+                // | FETCH | RQ# | USERNAME | IP | PORT
+                else if (messageTypeReceived.equalsIgnoreCase("FETCH-SUBJECTS")) { 
+                
+                    // Check if client sender's name exists in DB
+                    String[] userInfo = db_int.getUserInfo(messageListClient[2].toString());
+                    if (userInfo != null) {
+                        nameExists = true;
+                    }
+                    else {
+                        nameExists = false;
+                    }
+
+                    // Ip and port of address passed
+                    String ip = messageListClient[3].toString();
+                    String port = messageListClient[3].toString();
+
+                    // Return id, subject, usercount and last post
+                    ArrayList<String[]> subjects = db_int.getAllExistingSubjects();
+                    ArrayList<String> allSubjects = new ArrayList();
+
+                    for (int i = 0; i < subjects.size(); i++) {
+                        allSubjects.add(subjects.get(i)[1]);    // Get all subject names
+                    }
+                    
+                    // | FETCH-SUCCESS | RQ# | USERNAME | SUBJECTLIST |
+                    messageReplyClient = new Object[5];
+                    messageReplyClient[0] = "FETCH-SUCCESS";
+                    messageReplyClient[1] = messageListClient[1].toString(); //rq#
+                    messageReplyClient[2] = messageListClient[2].toString(); //username
+                    messageReplyClient[3] = allSubjects;
+                }
+
+
+
                 // TODO: Implement timer to set serverActive to true or false based on time and serverSwap to true
                 // TODO: Change this so that this is executable directly from file itself without needing user input
                 //@@@@@@@@@@@@@@@@@@@@@@@@Important to change SOCKET to 3000 if on server_B@@@@@@@@@@@@@@@@@@@@@
