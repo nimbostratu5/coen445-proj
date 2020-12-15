@@ -55,4 +55,9 @@ public class Logger {
         }
     }
 
+    //read the file and display on terminal
+    public void deleteLog() {
+
+    }
+
 }
