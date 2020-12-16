@@ -484,7 +484,7 @@ public class Server_A {
                     }
                 }
 
-                // | FETCH | RQ# | USERNAME | IP | PORT
+                // | FETCH-SUBJECTS | RQ# | USERNAME | IP | PORT
                 else if (messageTypeReceived.equalsIgnoreCase("FETCH-SUBJECTS")) { 
                 
                     // Check if client sender's name exists in DB
@@ -509,7 +509,7 @@ public class Server_A {
                     }
                     
                     // | FETCH-SUCCESS | RQ# | USERNAME | SUBJECTLIST |
-                    messageReplyClient = new Object[5];
+                    messageReplyClient = new Object[4];
                     messageReplyClient[0] = "FETCH-SUCCESS";
                     messageReplyClient[1] = messageListClient[1].toString(); //rq#
                     messageReplyClient[2] = messageListClient[2].toString(); //username
