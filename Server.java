@@ -3,6 +3,8 @@ import java.net.*;
 import java.sql.SQLException;
 import java.util.Enumeration;
 import java.util.Scanner;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -14,7 +16,7 @@ public class Server {
     public static boolean shutdown = false;
     public static boolean serverUpdate = false;
 
-    public static Logger logger;
+    public static volatile Logger logger;
     public static DatagramSocket serverSocket;
     public static String serverName;
     public static int serverPort;
@@ -26,8 +28,9 @@ public class Server {
     public static ExecutorService threadPool;
     private static int numThreads;
     public static Semaphore logSem;
-
+    public static int period;
     public static Scanner sc;
+
 
     public static void main(String[] args) throws IOException, ClassNotFoundException, InterruptedException {
 
@@ -37,9 +40,10 @@ public class Server {
         serverSocket = new DatagramSocket(serverPort);
 
         //serverInterrupt gets user input from terminal to UPDATE-SERVER or to SHUTDOWN the server.
-        ServerInterrupt serverInterrupt = new ServerInterrupt(sc,0);
+        ServerInterrupt serverInterrupt = new ServerInterrupt(sc, period);
         siThread = new Thread(serverInterrupt);
         siThread.start();
+
 
         while(!shutdown){
             DatagramPacket receivedPacket = new DatagramPacket(receiveData, receiveData.length);
@@ -70,7 +74,6 @@ public class Server {
 
     public static void serverSetup() throws SocketException {
 
-        // TODO: 2020-12-07 : USER INPUT FOR TIME DURATION OF SERVER TIME-OUT SWAP
         numThreads = 10;
         threadPool = Executors.newFixedThreadPool(numThreads);
         logSem = new Semaphore(1, true);
@@ -79,7 +82,8 @@ public class Server {
 
         sc = new Scanner(System.in);
 
-        System.out.println("\n\n***************** Server Setup *****************");
+        System.out.println("\n\n********************************** Server Setup **********************************");
+        System.out.println("This machine's IP is: "+getIP());
         System.out.print("Enter server name: ");
         serverName = sc.nextLine();
         logger.createFile(serverName);
@@ -94,20 +98,22 @@ public class Server {
 
         sc.nextLine();
 
+        System.out.print("Specify which database to connect to [DB_A or DB_B]: ");
+        String db_name = sc.nextLine();
+        restartDB(db_name);
+
         System.out.println("Is this server serving first? y/n");
         String in = sc.nextLine();
         if(in.equals("y")) {
             isServing.set(true);
         }
-        restartDB();
-        System.out.println("Setup complete. "+serverName + " has been created with IP " + getIP() + ":" + serverPort);
-        System.out.println("************************************************\n");
-;
-    }
 
-    public static void serverSwap(){
-        busy.set(true);
-        threadPool.execute(new Worker(otherServerIP, otherServerPort, serverSocket, logSem,true));
+        System.out.print("Specify the server serving time interval in ms: ");
+        period = sc.nextInt();
+        sc.nextLine();
+        System.out.println("Setup complete. "+serverName + " has been created with IP " + getIP() + ":" + serverPort);
+        System.out.println("**********************************************************************************\n");
+;
     }
 
     public static void updateServer(String newIP, int newPort) throws SocketException, InterruptedException, UnknownHostException {
@@ -164,8 +170,10 @@ public class Server {
         return null;
     }
 
-    public static void restartDB() {
-        // Create instance of DB
+    public static void restartDB(String db_name) {
+
+        // Create instance of a specified DB
+        //UNCOMMENT THIS WHEN DB_interface is update db_int = new DB_interface(db_name);
         db_int = new DB_interface();
 
         // Test if DB can connect

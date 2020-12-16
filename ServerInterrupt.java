@@ -3,30 +3,52 @@ import java.net.UnknownHostException;
 import java.util.Scanner;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 
 public class ServerInterrupt implements Runnable {
 
     Scanner sc;
-    int delay;
-    public ServerInterrupt(Scanner sc, int delay) {
+    public static int period;
+
+    public static TimerTask task;
+    public static Timer timer;
+    public ServerInterrupt(Scanner sc, int period) {
         this.sc = sc;
-        this.delay = delay;
+        this.period = period;
     }
+
+
+    public static void resumeTimerTask() {
+       timer = new Timer();
+
+        int delay = 5000; // delay of 1s before starting task
+        TimerTask task = new TimerTask() {
+            @Override
+            public void run() {
+                if(Server.isServing.get()) {
+                    Server.busy.set(true); //don't think necessary
+                    try {
+                        Server.threadPool.execute(new Worker(Server.otherServerIP, Server.otherServerPort, Server.serverSocket, Server.logSem, true));
+                    } catch (RejectedExecutionException r) {
+                        System.out.println("Server swap attempt was blocked because the Executor is closing.");
+                    }
+                    Server.busy.set(false); //don't think necessary
+                }
+            }
+        };
+        timer.schedule( task, delay, period );
+    }
+
+    public static void pauseTimerTask() {
+        timer.cancel();
+    }
+
 
     @Override
     public void run() {
 
-        //reference for the timer task: https://www.tutorialspoint.com/java/util/timer_scheduleatfixedrate_delay.htm
-       /* Timer timer = new Timer();
-        int delay = 1000; // delay of 1s before starting task
-        int period = 5000; // task is executed every x seconds
-        timer.scheduleAtFixedRate(new TimerTask() {
-
-            public void run() {
-
-            }
-        }, delay, period);*/
+        resumeTimerTask();
 
         String input;
         boolean out = false;
@@ -58,7 +80,7 @@ public class ServerInterrupt implements Runnable {
                         System.out.print("System shutdown requested. ");
                         try {
                            // Server.shutdownServer();
-
+                            pauseTimerTask();
                             System.out.println("Shutting down the server...");
                             Server.threadPool.awaitTermination(5000, TimeUnit.MILLISECONDS);
                             System.out.print("All workers have terminated ");
@@ -68,6 +90,7 @@ public class ServerInterrupt implements Runnable {
                             System.out.print("Server socket closed.");
                             Server.shutdown=true;
                             out = true;
+
 
                         } catch (InterruptedException e) {
                             e.printStackTrace();

@@ -15,7 +15,7 @@ public class Worker implements Runnable{
     protected String otherServerIP;
     protected int otherServerPort;
 
-    private Semaphore logSem; 
+    private Semaphore logSem;
     // For database
     private static DB_interface db_int;
     private static Boolean nameExists = false;
@@ -39,6 +39,8 @@ public class Worker implements Runnable{
         this.serverSocket = serverSocket;
         this.otherServerIP = otherServerIP;
         this.otherServerPort = otherServerPort;
+        clientIP = this.otherServerIP;
+        clientPort = this.otherServerPort;
         this.logSem = logSem;
         serverUpdate = true;
     }
@@ -47,6 +49,8 @@ public class Worker implements Runnable{
         this.serverSocket = serverSocket;
         this.otherServerIP = otherServerIP;
         this.otherServerPort = otherServerPort;
+        clientIP = this.otherServerIP;
+        clientPort = this.otherServerPort;
         this.logSem = logSem;
         this.serverSwap = serverSwap;
     }
@@ -124,11 +128,12 @@ public class Worker implements Runnable{
         else if(serverSwap){
 
             Server.isServing.set(false);
-
-            System.out.println("Change server triggered by timer. This server is no longer serving.");
+            serverSwap = false;
+            System.out.println("Change server triggered by timer. This server will no longer serve.");
+            ServerInterrupt.pauseTimerTask();
             try {
                 logSem.acquire();
-                Server.logger.logEvent("change server command triggered by timer. This server is no longer serving.");
+                Server.logger.logEvent("change server command triggered by timer. This server will no longer serve.");
                 logSem.release();
             } catch (InterruptedException e) {
                 e.printStackTrace();
@@ -138,9 +143,18 @@ public class Worker implements Runnable{
             replyMsgClient[1] = otherServerIP;
             replyMsgClient[2] = otherServerPort;
 
-        }
-        else {
+            replyMsgServer = new Object[3];
+            replyMsgServer[0] = "PREPARE-SWAP";
+            replyMsgServer[1] = otherServerIP;
+            replyMsgServer[2] = otherServerPort;
 
+            try {
+                sendMessage(replyMsgServer,otherServerIP,otherServerPort);
+            } catch (UnknownHostException e) {
+                e.printStackTrace();
+            }
+        }
+        else if (!serverSwap&&receivedMsg != null){
             try {
                 logSem.acquire();
                 Server.logger.logEvent("received msg from "+clientIP+":"+clientPort+": "+receivedMsg[0].toString());
@@ -455,6 +469,88 @@ public class Worker implements Runnable{
                 case "PUBLISH": //    FROM CLIENT
                     //to client: reply MESSAGE to all users subscribed to specified subject else PUBLISH-DENIED to client only
                     //to other server: nothing
+                    try {
+                        db_int.connect();
+
+                        // Check if client sender's name exists in DB
+                        userInfo = db_int.getUserInfo(receivedMsg[2].toString());
+                        if (userInfo != null) {
+                            nameExists = true;
+                        }
+                        else {
+                            nameExists = false;
+                        }
+
+                        // Get subject of interest and message to publish
+                        String subject = receivedMsg[3].toString();
+                        String text = receivedMsg[4].toString();
+
+                        // Get subject ID from the list of all subjects
+                        int subjectId = -1;
+                        ArrayList<String[]> subjectList2 = db_int.getAllExistingSubjects();
+
+                        for (int i = 0; i < subjectList2.size(); i++) {
+                            int tempId = Integer.parseInt(subjectList2.get(i)[0]);
+                            String tempSubject = subjectList2.get(i)[1];
+
+                            if (subject.equals(tempSubject)) {
+                                subjectId = tempId;
+                                break;
+                            }
+                        }
+
+                        // Get all users subscribed to the subject of interest
+                        ArrayList<String[]> usersSubscribed = db_int.getAllUsersSubscribed(subjectId);
+
+                        // If the client sender is registered and if there are users subscribed to the subject
+                        if (nameExists && usersSubscribed.size() > 0 && usersSubscribed != null && subjectId != -1) {
+
+                            // For each user subscribed to the subject, send them a message
+                            for (int i = 0; i < usersSubscribed.size(); i++) {
+
+                                // Get the subscribed user's name and address to send to
+                                String name = usersSubscribed.get(i)[0];
+                                String fullAddress = usersSubscribed.get(i)[1];
+                                String[] addressSplit = fullAddress.split(":"); // IP[0] and Port[1]
+
+                                // Create message to send to the subscribed user
+                                replyMsgClient = new Object[4];
+                                replyMsgClient[0] = "MESSAGE";
+                                replyMsgClient[1] = name;
+                                replyMsgClient[2] = subject;
+                                replyMsgClient[3] = text;
+
+                                // Send message
+                                if (replyMsgClient != null) {
+                                    sendMessage(replyMsgClient, addressSplit[0], Integer.parseInt(addressSplit[1]));
+                                }
+                            }
+
+                            // Skip sending message back to user publisher
+                            replyMsgClient = null;
+                        }
+
+                        // If sender isn't registered
+                        else if (!nameExists) {
+                            // Create message to send
+                            replyMsgClient = new Object[3];
+                            replyMsgClient[0] = "PUBLISH-DENIED";
+                            replyMsgClient[1] = receivedMsg[1].toString();
+                            replyMsgClient[2] = "Unregistered user not allowed to publish";
+                        }
+                        // If no users subscribed to the subject of interest
+                        else {
+                            // Create message to send
+                            replyMsgClient = new Object[3];
+                            replyMsgClient[0] = "PUBLISH-DENIED";
+                            replyMsgClient[1] = receivedMsg[1].toString();
+                            replyMsgClient[2] = "No users subscribed to subject of interest";
+                        }
+
+                        db_int.disconnect(); // Close DB after checking for user
+                    } catch (SQLException | UnknownHostException e) {
+                        e.printStackTrace();
+                    }
                     break;
 
                 // TODO: 2020-12-07 : MUST UPDATE OTHER SERVER ????
@@ -493,10 +589,33 @@ public class Worker implements Runnable{
                     }
                     break;
 
+                case "PREPARE-SWAP": //    FROM OTHER SERVER
+
+                    Server.isServing.set(true);
+                    System.out.println("This server is now serving.");
+                    ServerInterrupt.resumeTimerTask();
+                    try {
+                        logSem.acquire();
+                        Server.logger.logEvent("PREPARE-SWAP request received. This server is now serving.");
+                        logSem.release();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                    break;
+
+
                 /***************************************************************************************************************/
                 /*                  2.6. UNKNOWN MESSAGE TYPE                                                                  */
                 /***************************************************************************************************************/
                 default:
+                    //ignore but log the message
+                    try {
+                        logSem.acquire();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                    Server.logger.logEvent("Other server IP:Port were updated to "+ receivedMsg[1].toString() +":"+receivedMsg[2].toString());
+                    logSem.release();
 
             }
 
