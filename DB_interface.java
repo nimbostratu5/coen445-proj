@@ -175,7 +175,7 @@ public class DB_interface{
 					while(result.next()) {
 						subject_tables.append("subject_"+result.getInt("id")+"_subs, ");
 					}
-					if (subject_tables.length > 0){
+					if (subject_tables.length() > 0){
 
 						subject_tables.deleteCharAt(subject_tables.length()-1);
 						subject_tables.deleteCharAt(subject_tables.length()-1);
@@ -194,7 +194,7 @@ public class DB_interface{
 						statement.execute(delete_subjects);
 
 					}
-					
+
 					connection.commit();
 					
 				} catch (SQLException e) {
