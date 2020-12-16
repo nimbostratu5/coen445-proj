@@ -431,7 +431,10 @@ public class Server_A {
                         }
 
                         // Get all users subscribed to the subject of interest
-                        ArrayList<String[]> usersSubscribed = db_int.getAllUsersSubscribed(subjectId);
+                        ArrayList<String[]> usersSubscribed = new ArrayList();
+                        if (subjectId != -1) {
+                            usersSubscribed = db_int.getAllUsersSubscribed(subjectId);
+                        }
 
                         // If the client sender is registered and if there are users subscribed to the subject
                         if (nameExists && usersSubscribed.size() > 0 && usersSubscribed != null && subjectId != -1) {
