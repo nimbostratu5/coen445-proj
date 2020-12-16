@@ -9,7 +9,7 @@ public class DB_interface{
 	// Parameters required to authenticate to the database: This is a very silly and fast way of doing it.
 	private final String HOSTNAME="database-1.cgsj5cw6pwbs.ca-central-1.rds.amazonaws.com";
 	private final int PORT=3306;
-	private final String dbName = "COEN445";
+	private String dbName = "COEN445";
 	private final String [] CREDENTIALS = new String [] {"admin","COEN4452020"};
 	
 	private Connection connection;
