@@ -503,7 +503,7 @@ public class Server_A {
 
                         // Ip and port of address passed
                         String ip = messageListClient[3].toString();
-                        String port = messageListClient[3].toString();
+                        String port = messageListClient[4].toString();
 
                         // Return id, subject, usercount and last post
                         ArrayList<String[]> subjects = db_int.getAllExistingSubjects();
