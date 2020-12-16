@@ -173,7 +173,8 @@ public class Server {
     public static void restartDB(String db_name) {
 
         // Create instance of a specified DB
-        //UNCOMMENT THIS WHEN DB_interface is update db_int = new DB_interface(db_name);
+        //UNCOMMENT THIS WHEN DB_interface is update
+        //db_int = new DB_interface("COEN445");
         db_int = new DB_interface();
 
         // Test if DB can connect

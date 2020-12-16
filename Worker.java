@@ -127,21 +127,14 @@ public class Worker implements Runnable{
         }
         else if(serverSwap){
 
-            Server.isServing.set(false);
+            /*Server.isServing.set(false);*/
             serverSwap = false;
-            System.out.println("Change server triggered by timer. This server will no longer serve.");
-            ServerInterrupt.pauseTimerTask();
-            try {
-                logSem.acquire();
-                Server.logger.logEvent("change server command triggered by timer. This server will no longer serve.");
-                logSem.release();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-            replyMsgClient = new Object[3];
+
+
+            /*replyMsgClient = new Object[3];
             replyMsgClient[0] = "CHANGE-SERVER";
             replyMsgClient[1] = otherServerIP;
-            replyMsgClient[2] = otherServerPort;
+            replyMsgClient[2] = otherServerPort;*/
 
             replyMsgServer = new Object[3];
             replyMsgServer[0] = "PREPARE-SWAP";
@@ -398,6 +391,7 @@ public class Worker implements Runnable{
                         db_int.connect();
 
                         // Check if name exists in DB
+
                         userInfo = db_int.getUserInfo(receivedMsg[2].toString());
                         if (userInfo != null) {
                             nameExists = true;
@@ -471,6 +465,7 @@ public class Worker implements Runnable{
                     //to other server: nothing
                     try {
                         db_int.connect();
+                        System.out.println(receivedMsg[2].toString());
 
                         // Check if client sender's name exists in DB
                         userInfo = db_int.getUserInfo(receivedMsg[2].toString());
@@ -500,7 +495,11 @@ public class Worker implements Runnable{
                         }
 
                         // Get all users subscribed to the subject of interest
-                        ArrayList<String[]> usersSubscribed = db_int.getAllUsersSubscribed(subjectId);
+                        //ArrayList<String[]> usersSubscribed = db_int.getAllUsersSubscribed(subjectId);
+                        ArrayList<String[]> usersSubscribed = new ArrayList();
+                        if (subjectId != -1) {
+                            usersSubscribed = db_int.getAllUsersSubscribed(subjectId);
+                        }
 
                         // If the client sender is registered and if there are users subscribed to the subject
                         if (nameExists && usersSubscribed.size() > 0 && usersSubscribed != null && subjectId != -1) {
@@ -519,6 +518,7 @@ public class Worker implements Runnable{
                                 replyMsgClient[1] = name;
                                 replyMsgClient[2] = subject;
                                 replyMsgClient[3] = text;
+
 
                                 // Send message
                                 if (replyMsgClient != null) {
@@ -555,6 +555,42 @@ public class Worker implements Runnable{
 
                 // TODO: 2020-12-07 : MUST UPDATE OTHER SERVER ????
 
+                case "FETCH-SUBJECTS":
+                    // Check if client sender's name exists in DB
+                    try {
+                        db_int.connect();
+                    } catch (SQLException throwables) {
+                        throwables.printStackTrace();
+                    }
+
+                    userInfo = db_int.getUserInfo(receivedMsg[2].toString());
+                    if (userInfo != null) {
+                        nameExists = true;
+                    }
+                    else {
+                        nameExists = false;
+                    }
+
+                    // Ip and port of address passed
+                    String ip = receivedMsg[3].toString();
+                    String port = receivedMsg[4].toString();
+
+                    // Return id, subject, usercount and last post
+                    ArrayList<String[]> subjects = db_int.getAllExistingSubjects();
+                    ArrayList<String> allSubjects = new ArrayList();
+
+                    for (int i = 0; i < subjects.size(); i++) {
+                        allSubjects.add(subjects.get(i)[1]);    // Get all subject names
+                    }
+
+                    // | FETCH-SUCCESS | RQ# | USERNAME | SUBJECTLIST |
+                    replyMsgClient = new Object[4];
+                    replyMsgClient[0] = "FETCH-SUCCESS";
+                    replyMsgClient[1] = receivedMsg[1].toString(); //rq#
+                    replyMsgClient[2] = receivedMsg[2].toString(); //username
+                    replyMsgClient[3] = allSubjects;
+                    break;
+
 
                 /***************************************************************************************************************/
                 /*                  2.5. Server overtaking and mobility                                                        */
@@ -589,7 +625,7 @@ public class Worker implements Runnable{
                     }
                     break;
 
-                case "PREPARE-SWAP": //    FROM OTHER SERVER
+               /* case "PREPARE-SWAP": //    FROM OTHER SERVER
 
                     Server.isServing.set(true);
                     System.out.println("This server is now serving.");
@@ -601,6 +637,33 @@ public class Worker implements Runnable{
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
+                    break;*/
+
+                case "PREPARE-SWAP": //    FROM OTHER SERVER
+
+                    replyMsgServer = new Object[1];
+                    replyMsgServer[0] = "READY-SWAP";
+                    break;
+
+                case "READY-SWAP": //    FROM OTHER SERVER
+                    Server.isServing.set(false);
+                    serverSwap = false;
+                    ServerInterrupt.pauseTimerTask();
+
+                    System.out.println("Change server triggered by timer. This server will no longer serve.");
+                    try {
+                        logSem.acquire();
+                        Server.logger.logEvent("change server command triggered by timer. This server will no longer serve.");
+                        logSem.release();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+
+                 //   replyMsgClient = new Object[3];
+                 //   replyMsgClient[0] = "CHANGE-SERVER";
+                  //  replyMsgClient[1] = otherServerIP;
+                  //  replyMsgClient[2] = otherServerPort;
+
                     break;
 
 
@@ -626,6 +689,7 @@ public class Worker implements Runnable{
             if (replyMsgClient != null) {
                 try {
                     sendMessage(replyMsgClient, clientIP,clientPort);
+                    System.out.println("message sent");
                 } catch (UnknownHostException e) {
                     e.printStackTrace();
                 }

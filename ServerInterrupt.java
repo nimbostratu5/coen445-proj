@@ -22,7 +22,7 @@ public class ServerInterrupt implements Runnable {
     public static void resumeTimerTask() {
        timer = new Timer();
 
-        int delay = 5000; // delay of 1s before starting task
+        int delay = period; // delay of 1s before starting task
         TimerTask task = new TimerTask() {
             @Override
             public void run() {

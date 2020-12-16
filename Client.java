@@ -212,6 +212,16 @@ public class Client {
                         message[4] = sc.nextLine();
                         break;
 
+                    case "FETCH-SUBJECTS":
+                        pendingRequestMap.put(rqNum,"FETCH-SUBJECTS");
+                        message = new Object[5];
+                        message[0] = messageType;
+                        message[1] = rqNum++;
+                        message[2] = username;
+                        message[3] = getIP();
+                        message[4] = client_port;
+                        break;
+
                     case "LOG":
                         logger.displayLog();
                         break;
@@ -220,7 +230,13 @@ public class Client {
                         System.out.println("Unknown message type. Available options are REGISTER, DE-REGISTER, UPDATE, PUBLISH, SUBJECTS.\nLOG to display the log file, and BYE to close session.");
                 }
 
-                sendMessage(message,currentServer,currentServer_port,logger);
+                if(rqNum==0) {
+                    sendMessage(message, serverA, serverA_port, logger);
+                    sendMessage(message, serverB, serverB_port, logger);
+                }
+                else{
+                    sendMessage(message, currentServer, currentServer_port, logger);
+                }
             }
         }
 
@@ -238,8 +254,8 @@ public class Client {
             byte[] sendData = new byte[1024];
             sendData = serialize(message);
 
-            if(message[0].toString().equals("REGISTER")){
-                /*  SEND THE MESSAGE TO THE 2 SERVERS  */
+            /*if(message[0].toString().equals("REGISTER")){
+                *//*  SEND THE MESSAGE TO THE 2 SERVERS  *//*
                 DatagramPacket sendPacket  = new DatagramPacket(sendData,sendData.length,serverA,serverA_port);
                 DatagramPacket sendPacket2  = new DatagramPacket(sendData,sendData.length,serverB,serverB_port);
                 try {
@@ -255,7 +271,7 @@ public class Client {
                 }
 
             }
-            else{
+            else{*/
                 /*  SEND THE MESSAGE TO CURRENT SERVER  */
                 DatagramPacket sendPacket  = new DatagramPacket(sendData,sendData.length,cS,cSp);            
                 try {
@@ -268,7 +284,7 @@ public class Client {
                     logger.logEvent("message failed to be sent");
                     e.printStackTrace();
                 }
-            }
+            //}
 
             System.out.println("[RQ#"+message[1].toString()+"]"+" sent! Awaiting server response...");
 
