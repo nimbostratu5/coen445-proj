@@ -449,7 +449,7 @@ public class Server_A {
                             String fullAddress = receivePacket.getSocketAddress().toString();
                             db_int.sendMessage(sender, subjectId, text, fullAddress.substring(1));
                             
-                            // Skip sending message back to user publisher
+                            // Skip sending message to client
                             messageReplyClient = null;
                         }
                         
@@ -626,6 +626,26 @@ public class Server_A {
                     } 
                 }
 
+                // Receive server updated subjects and print
+                else if (messageTypeReceived.equalsIgnoreCase("PUBLISH-SUCCESS")) {
+                    try {
+                        db_int.connect();
+
+                        String name = messageListClient[2].toString();
+                        int subjectId = (int)messageListClient[3];
+                        String message = messageListClient[4].toString();
+                        String address = messageListClient[5].toString();
+
+                        db_int.sendMessage(name, subjectId, message, address);
+                        System.out.println("Message saved for subject.");
+
+                        db_int.disconnect();
+
+                    } catch (SQLException e) {
+                        e.printStackTrace();
+                    } 
+                }
+
                 // Receive server updated IP and socket
                 else if (messageTypeReceived.equalsIgnoreCase("CHANGE-SERVER")) {
                     System.out.println("Change-Server: Server A active.");
@@ -717,6 +737,53 @@ public class Server_A {
                         messageReplyServer[2] = messageListClient[2].toString();
                         messageReplyServer[3] = acceptedSubjectList;
                     }
+                }
+
+                else if (messageTypeReceived.equalsIgnoreCase("PUBLISH")) {
+                    try {
+                        db_int.connect();
+
+                        // Test if subject exists
+                        int subjectId = -1;
+
+                        // Get subject ID from the list of all subjects
+                        ArrayList<String[]> subjectList = db_int.getAllExistingSubjects();
+
+                        // Get subject of interest and message to publish
+                        String subject = messageListClient[3].toString();
+                        String text = messageListClient[4].toString();
+
+                        for (int i = 0; i < subjectList.size(); i++) {
+                            int tempId = Integer.parseInt(subjectList.get(i)[0]);
+                            String tempSubject = subjectList.get(i)[1];
+
+                            if (subject.equals(tempSubject)) {
+                                subjectId = tempId;
+                                break;
+                            }
+                        }
+
+                        if (nameExists.equals(true) && subjectId != -1) {
+                            // Get subject of interest and message to publish
+                            String fullAddress = receivePacket.getSocketAddress().toString();
+                            int rqNum = (int)messageListClient[1];
+                            String name = messageListClient[2].toString();
+        
+                            // Create message to send to the other server
+                            messageReplyServer = new Object[6];
+                            messageReplyServer[0] = "PUBLISH-SUCCESS";
+                            messageReplyServer[1] = rqNum;
+                            messageReplyServer[2] = name;
+                            messageReplyServer[3] = subjectId;
+                            messageReplyServer[4] = text;
+                            messageReplyServer[5] = fullAddress.substring(1);
+                        }
+
+                        db_int.disconnect();
+
+                    } catch (SQLException e) {
+                        e.printStackTrace();
+                    } 
                 }
 
                 // Change active servers
