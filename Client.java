@@ -3,6 +3,7 @@ import java.net.*;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class Client {
 
@@ -10,7 +11,7 @@ public class Client {
 
     /***********************    GLOBAL VARIABLES    ***********************/
 
-    public static Logger logger;
+    public static volatile Logger logger;
     private static String username;
     public static int rqNum = 1;
     public static ConcurrentHashMap<Integer,String> pendingRequestMap;
@@ -28,6 +29,8 @@ public class Client {
     public static Semaphore logSem;
     public static Semaphore socketSem;
 
+    public static AtomicBoolean run;
+
     static {
         try {
             clientSocket = new DatagramSocket(0);
@@ -42,6 +45,7 @@ public class Client {
 
     public static void main(String[] args) throws IOException, ClassNotFoundException, InterruptedException {
 
+        run = new AtomicBoolean(false);
         pendingRequestMap = new ConcurrentHashMap<Integer, String>();
         logSem = new Semaphore(1, true);
         socketSem = new Semaphore(1, true);
@@ -121,6 +125,7 @@ public class Client {
         System.out.println("\n~~~~~~~~~ Setup complete! Enter a command ~~~~~~~~~~\n");
         logger.logEvent("current user on this machine is " + username);
 
+        run.set(true);
         ClientInterrupt clientInterrupt = new ClientInterrupt(logger,username);
         Thread clientT = new Thread(clientInterrupt);
         clientT.start();
@@ -143,7 +148,7 @@ public class Client {
                 switch (messageType) {
 
                     case "BYE":
-                        sc.close();
+
                         bye = true;
                         break label;
 
@@ -241,11 +246,18 @@ public class Client {
         }
 
         /*  CLOSE SOCKET -- USER LOGOUT -- CLOSE SESSION  */
+        logger.logEvent("client closed application.");
+        run.set(false);
         clientSocket.close();
         clientT.join();
-        System.out.println("\n\n*************** Client Session Closed ***************\n");
-        logger.logEvent("client closed application.");
 
+        System.out.println("Delete log file? y/n");
+        String in = sc.next();
+        if(in.equals("y"))
+            logger.deleteLog();
+        sc.close();
+
+        System.out.println("\n*************** Client Session Closed ***************\n");
     }
 
     private static void sendMessage(Object[] message, InetAddress cS, int cSp, Logger logger ) throws IOException, ClassNotFoundException   {
@@ -286,7 +298,7 @@ public class Client {
                 }
             //}
 
-            System.out.println("[RQ#"+message[1].toString()+"]"+" sent! Awaiting server response...");
+            System.out.println("[RQ#"+message[1].toString()+"] message sent!");
 
         }
     }

@@ -26,13 +26,13 @@ public class ClientInterrupt implements Runnable {
             /*  RECEIVING  */
             byte[] receiveData = new byte[1024];
             DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
+         /*   try {
+                Client.clientSocket.setSoTimeout(20000);
 
-            try {
-                Client.clientSocket.setSoTimeout(100211100);
             } catch (SocketException e) {
-                Client.logger.logEvent("client timed-out, server not responding");
+                logger.logEvent("client timed-out, server not responding");
                 System.out.println("Client timed-out, server not responding. Try again.");
-            }
+            }*/
 
             try {
                 Client.clientSocket.receive(receivePacket);
@@ -45,10 +45,10 @@ public class ClientInterrupt implements Runnable {
                     switch (receivedMsg[0].toString()) {
 
                         case "REGISTERED":
-                            if (Client.pendingRequestMap.get((int) receivedMsg[1]) == "REQUEST") {
+                            //if (Client.pendingRequestMap.get(Integer.parseInt(receivedMsg[1].toString())) == "REQUEST") {
                                 System.out.println("RQ#" + receivedMsg[1].toString() + ": Registered to Server");
                                 logger.logEvent("RQ#" + receivedMsg[1].toString() + " processed successfully." + username + " is registered to server");
-                            }
+                           // }
                             break;
 
                         case "REGISTER-DENIED":
@@ -71,8 +71,8 @@ public class ClientInterrupt implements Runnable {
                             break;
 
                         case "UPDATE-DENIED":
-                            System.out.println("Update denied [RQ#" + receivedMsg[1].toString() + "]:" + receivedMsg[2].toString());
-                            logger.logEvent("client ip/socket updated to: " + receivedMsg[3] + ":" + receivedMsg[4]);
+                            System.out.println("Update denied [RQ#" + receivedMsg[1].toString() + "] reason:" + receivedMsg[2].toString());
+                            logger.logEvent("Update denied for [RQ#" + receivedMsg[1].toString() + "]:");
                             break;
 
                         case "SUBJECTS-UPDATED":
@@ -91,14 +91,8 @@ public class ClientInterrupt implements Runnable {
                             break;
 
                         case "MESSAGE":
-                            if (receivedMsg[1].toString().equals(username)) {
-                                System.out.println("Your message on " + receivedMsg[2].toString() + " was published.");
-                                logger.logEvent("client has published a message");
-                            } else {
-                                System.out.println("Message received from " + receivedMsg[1].toString() + " about " + receivedMsg[2].toString() + " :");
-                                System.out.println(receivedMsg[3].toString());
-                                logger.logEvent("client has received message from " + receivedMsg[1].toString());
-                            }
+                            System.out.println("["+receivedMsg[2].toString()+"] "+receivedMsg[1].toString() +" says: "+ receivedMsg[3].toString() +".");
+                            logger.logEvent("["+receivedMsg[2].toString()+"]"+" new message arrived from "+receivedMsg[1].toString());
                             break;
 
                         case "PUBLISH-DENIED":
@@ -114,10 +108,10 @@ public class ClientInterrupt implements Runnable {
 
                         case "FETCH-SUCCESS":
                             ArrayList<String> allSubjects = (ArrayList<String>) receivedMsg[3];
-                            if (Client.pendingRequestMap.get(Integer.parseInt(receivedMsg[1].toString())) == "FETCH-SUCCESS") {
+                            //if (Client.pendingRequestMap.get(Integer.parseInt(receivedMsg[1].toString())) == "FETCH-SUCCESS") {
                                 System.out.println("[RQ#" + receivedMsg[1].toString() + "] Fetched subjects: ");
                                 logger.logEvent("RQ#" + receivedMsg[1].toString() + ". Subject list fetching successful.");
-                            }
+                           // }
                             for (int i = 0; i < allSubjects.size(); i++) {
                                 System.out.println(allSubjects.get(i));
                             }
@@ -131,6 +125,7 @@ public class ClientInterrupt implements Runnable {
             } catch (IOException | ClassNotFoundException e) {
                 System.out.println("Closing socket..");
                 //e.printStackTrace();
+                break;
             }
         }
     }

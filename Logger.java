@@ -1,9 +1,7 @@
-import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Scanner;
 
 public class Logger {
 
@@ -56,7 +54,16 @@ public class Logger {
     }
 
     //read the file and display on terminal
-    public void deleteLog() {
+    public void deleteLog() throws IOException {
+
+
+        BufferedWriter out = new BufferedWriter(new FileWriter(myObj.getName()));
+        //out.write("aString1\n");
+        out.close();
+        boolean success = (new File(myObj.getName())).delete();
+        if (success) {
+            System.out.println("The log file has been successfully deleted");
+        }
 
     }
 

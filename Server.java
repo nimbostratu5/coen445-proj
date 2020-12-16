@@ -40,6 +40,7 @@ public class Server {
         serverSocket = new DatagramSocket(serverPort);
 
         //serverInterrupt gets user input from terminal to UPDATE-SERVER or to SHUTDOWN the server.
+        period=period*1000;
         ServerInterrupt serverInterrupt = new ServerInterrupt(sc, period);
         siThread = new Thread(serverInterrupt);
         siThread.start();
@@ -99,7 +100,7 @@ public class Server {
 
         sc.nextLine();
 
-        System.out.print("Specify which database to connect to [DB_A or DB_B]: ");
+        System.out.print("Specify which database to connect to [DB_1 or DB_2]: ");
         String db_name = sc.nextLine();
         restartDB(db_name);
 
@@ -109,7 +110,7 @@ public class Server {
             isServing.set(true);
         }
 
-        System.out.print("Specify the server serving time interval in ms: ");
+        System.out.print("Specify the server serving time interval in s: ");
         period = sc.nextInt();
         sc.nextLine();
         System.out.println("Setup complete. "+serverName + " has been created with IP " + getIP() + ":" + serverPort);
@@ -121,17 +122,15 @@ public class Server {
         System.out.println("Closing current socket...");
         busy.set(true);
         System.out.println("Checking if workers have finished their tasks...");
-        threadPool.awaitTermination(5000, TimeUnit.MILLISECONDS);
+        threadPool.awaitTermination(2500, TimeUnit.MILLISECONDS);
         System.out.println("All workers have finished their tasks.");
         threadPool.shutdown();
         serverSocket.close();
         serverSocket = new DatagramSocket(newPort);
         threadPool = Executors.newFixedThreadPool(numThreads);
-
-
         busy.set(false);
         System.out.println("Server socket has been updated to: " + newIP + ":" + serverSocket.getLocalPort());
-
+        Server.threadPool.execute(new Worker(Server.otherServerIP, Server.otherServerPort, Server.serverSocket, Server.logSem));
     }
 
     public static void shutdownServer() throws InterruptedException {
@@ -176,7 +175,13 @@ public class Server {
         // Create instance of a specified DB
         //UNCOMMENT THIS WHEN DB_interface is update
         //db_int = new DB_interface("COEN445");
-        db_int = new DB_interface();
+        if(db_name.equalsIgnoreCase("db_1")) {
+            db_int = new DB_interface("COEN445");
+        }
+        else if(db_name.equalsIgnoreCase("db_2")) {
+            db_int = new DB_interface("COEN445_2");
+        }
+        else {db_int = new DB_interface("COEN445");}
 
         // Test if DB can connect
         try {

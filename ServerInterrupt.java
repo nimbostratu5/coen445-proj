@@ -20,7 +20,6 @@ public class ServerInterrupt implements Runnable {
         delay = period;
     }
 
-
     public static void resumeTimerTask() {
         timer = new Timer();
 
@@ -93,7 +92,6 @@ public class ServerInterrupt implements Runnable {
                             System.out.print("Server socket closed.");
                             Server.shutdown=true;
                             out = true;
-
 
                         } catch (InterruptedException e) {
                             e.printStackTrace();
