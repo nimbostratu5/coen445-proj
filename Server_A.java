@@ -178,22 +178,6 @@ public class Server_A {
 
 
         while (true) {
-
-            // if (sc.hasNextLine() && serverActive.equals(false)) {
-            //     String updateServer = sc.next();
-
-            //     if (updateServer.equalsIgnoreCase("UPDATE-SERVER")) {
-            //         System.out.println("Please input comma/space seperated IP and socket: ");
-            //         String ipAndSocket = sc.next();
-            //         String[] listIpAndSocket = ipAndSocket.split("\\s+"); //[0] = ip, [1] socket
-            //         messageReplyServer = new Object[3];
-            //         messageReplyServer[0] = "UPDATE-SERVER";
-            //         messageReplyServer[1] = listIpAndSocket[0].toString();
-            //         messageReplyServer[2] = listIpAndSocket[1].toString();
-
-            //         sendServerFlag = true;
-            //     }
-            // }
             
             //--------------------------------Receiving client packet data----------------------------------
             receivePacket = new DatagramPacket(replyDataClient, replyDataClient.length); //Datagram receiving size
@@ -459,6 +443,11 @@ public class Server_A {
                                     sendMessage(messageReplyClient, addressSplit[0], addressSplit[1]);
                                 }
                             }
+
+                            // Adding message into database for particular subject
+                            String sender = messageListClient[2].toString();
+                            String fullAddress = receivePacket.getSocketAddress().toString();
+                            db_int.sendMessage(sender, subjectId, text, fullAddress.substring(1));
                             
                             // Skip sending message back to user publisher
                             messageReplyClient = null;
@@ -522,14 +511,13 @@ public class Server_A {
 
                         // To read subjects, cast the output to arraylist
                         // I.E. new ArrayList<>((ArrayList<String>) receivedMsg[3])
+                        db_int.disconnect();
 
                     } catch (SQLException e) {
                         e.printStackTrace();
                     }
                     
                 }
-
-
 
                 // TODO: Implement timer to set serverActive to true or false based on time and serverSwap to true
                 // TODO: Change this so that this is executable directly from file itself without needing user input
@@ -557,44 +545,85 @@ public class Server_A {
             else if (serverActive.equals(false)) {
 
                 if (messageTypeReceived.equalsIgnoreCase("REGISTERED")) {
-                    for (int i = 0; i < messageListClient.length; i++) {
-                        System.out.println("Received: " + messageListClient[i].toString());
+                    try {
+                        db_int.connect();
+
+                        // Create address 
+                        String userFullAddress = messageListClient[3].toString() + ":" + messageListClient[4].toString();
+
+                        // Save user into db
+                        db_int.createNewUserAccount(messageListClient[2].toString(), userFullAddress);
+
+                        System.out.println("Registered: User <" + messageListClient[2].toString() + "> registered and received from: " + receivePacket.getSocketAddress().toString());
+                        
+                        db_int.disconnect();
+                    
+                    } catch (SQLException e) {
+                        e.printStackTrace();
                     }
-                    System.out.println("Registered: User <" + messageListClient[2].toString() + "> registered and received from: " + receivePacket.getSocketAddress().toString());
                 }
 
                 else if (messageTypeReceived.equalsIgnoreCase("REGISTER-DENIED")) {
-                    for (int i = 0; i < messageListClient.length; i++) {
-                        System.out.println("Received: " + messageListClient[i].toString());
-                    }
                     System.out.println("Message Received From: " + receivePacket.getSocketAddress().toString());
                     System.out.println("Register-Denied: User <" + messageListClient[2].toString() + "> already exists...");
                 }
 
                 else if (messageTypeReceived.equalsIgnoreCase("DE-REGISTER")) {
-                    System.out.println("De-Register: User <" + messageListClient[1].toString() + "> has been de-registered...");
+                    try {
+                        db_int.connect();
+
+                        // Delete user from db
+                        db_int.deleteUser(messageListClient[1].toString());
+                        System.out.println("De-Register: User <" + messageListClient[1].toString() + "> has been de-registered...");
+
+                        db_int.disconnect();
+
+                    } catch (SQLException e) {
+                        e.printStackTrace();
+                    }
                 }
 
-                // else if (messageTypeReceived.equalsIgnoreCase("INVALID-DE-REGISTER")) {
-                //     System.out.println("Invalid de-register: user <" + messageListClient[1].toString() + "> does not exist...");
-                // }
-
                 else if (messageTypeReceived.equalsIgnoreCase("UPDATE-CONFIRMED")) {
-                    System.out.println("User <" + messageListClient[2].toString() + "> IP Changed to: " + messageListClient[3].toString() + " port: " + messageListClient[4].toString());
+                    try {
+                        db_int.connect();
+
+                        // Update user info in DB
+                        String userFullAddress = messageListClient[3].toString() + ":" + messageListClient[4].toString();
+                        db_int.updateAddress(messageListClient[2].toString(), userFullAddress);
+                        
+                        System.out.println("User <" + messageListClient[2].toString() + "> IP Changed to: " + messageListClient[3].toString() + " port: " + messageListClient[4].toString());
+
+                        db_int.disconnect();
+
+                    } catch (SQLException e) {
+                        e.printStackTrace();
+                    }
                 }
 
                 // Receive server updated subjects and print
                 else if (messageTypeReceived.equalsIgnoreCase("SUBJECTS-UPDATED")) {
+                    try {
+                        db_int.connect();
 
-                    // Get list of correct subjects from other server
-                    ArrayList<String> subjectList = new ArrayList<>((ArrayList<String>) messageListClient[3]);
+                        // Get list of correct subjects from other server
+                        ArrayList<String> subjectList = new ArrayList<>((ArrayList<String>) messageListClient[3]);
+                        String stringList = "";
 
-                    String stringList = "";
-                    for (String subject : subjectList) {
-                        stringList += subject + ","; 
-                    }
+                        // Save subjects in DB
+                        System.out.println("Number of valid subjects: " + subjectList.size());
+                        for (String subject : subjectList) {
+                            db_int.registerToSubject(messageListClient[2].toString(), subject);
+                            stringList += subject + ","; 
+                        }
 
-                    System.out.println("Subjects-Updated: User <" + messageListClient[2].toString() + "> updated " + subjectList.size() + " subjects: " + stringList.substring(0, stringList.length() - 1));
+
+                        System.out.println("Subjects-Updated: User <" + messageListClient[2].toString() + "> updated " + subjectList.size() + " subjects: " + stringList.substring(0, stringList.length() - 1));
+
+                        db_int.disconnect();
+
+                    } catch (SQLException e) {
+                        e.printStackTrace();
+                    } 
                 }
 
                 // Receive server updated IP and socket
@@ -604,24 +633,24 @@ public class Server_A {
                     sendServerFlag = false;
                 }
                 
-                // TODO: Figure out how to place this within the while loop to allow it to be trigged while running
-                // TODO: UPDATE-SERVER, then take input??
-                //TODO: Why is this code not reachable while running the program? Only works when i put it at START of while loop
-                else if (sc.hasNextLine()) {
-                    String updateServer = sc.next();
+                // // TODO: Figure out how to place this within the while loop to allow it to be trigged while running
+                // // TODO: UPDATE-SERVER, then take input??
+                // //TODO: Why is this code not reachable while running the program? Only works when i put it at START of while loop
+                // else if (sc.hasNextLine()) {
+                //     String updateServer = sc.next();
 
-                    if (updateServer.equalsIgnoreCase("UPDATE-SERVER")) {
-                        System.out.println("Please input comma/space seperated IP and socket: ");
-                        String ipAndSocket = sc.next();
-                        String[] listIpAndSocket = ipAndSocket.split("\\s+"); //[0] = ip, [1] socket
-                        messageReplyServer = new Object[3];
-                        messageReplyServer[0] = "UPDATE-SERVER";
-                        messageReplyServer[1] = listIpAndSocket[0].toString();
-                        messageReplyServer[2] = listIpAndSocket[1].toString();
+                //     if (updateServer.equalsIgnoreCase("UPDATE-SERVER")) {
+                //         System.out.println("Please input comma/space seperated IP and socket: ");
+                //         String ipAndSocket = sc.next();
+                //         String[] listIpAndSocket = ipAndSocket.split("\\s+"); //[0] = ip, [1] socket
+                //         messageReplyServer = new Object[3];
+                //         messageReplyServer[0] = "UPDATE-SERVER";
+                //         messageReplyServer[1] = listIpAndSocket[0].toString();
+                //         messageReplyServer[2] = listIpAndSocket[1].toString();
 
-                        sendServerFlag = true;
-                    }
-                }
+                //         sendServerFlag = true;
+                //     }
+                // }
             }
 
             //---------------------------------------Send to server B----------------------------------------
@@ -657,11 +686,6 @@ public class Server_A {
                         messageReplyServer[0] = "DE-REGISTER";
                         messageReplyServer[1] = messageListClient[2].toString();
                     }
-                    // else {
-                    //     messageReplyServer = new Object[2];
-                    //     messageReplyServer[0] = "INVALID-DE-REGISTER";
-                    //     messageReplyServer[1] = messageListClient[2].toString();
-                    // }
                 }
 
                 // Update user's IP Address and Socket#
