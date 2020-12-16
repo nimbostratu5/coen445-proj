@@ -175,22 +175,26 @@ public class DB_interface{
 					while(result.next()) {
 						subject_tables.append("subject_"+result.getInt("id")+"_subs, ");
 					}
-					
-					subject_tables.deleteCharAt(subject_tables.length()-1);
-					subject_tables.deleteCharAt(subject_tables.length()-1);
-					
-					
-					String [] subs = subject_tables.toString().split(",");
-					for (int i = 0; i < subs.length; i++) {
+					if (subject_tables.length > 0){
+
+						subject_tables.deleteCharAt(subject_tables.length()-1);
+						subject_tables.deleteCharAt(subject_tables.length()-1);
 						
-						String target_table = subs[i].trim();
-						String condition = target_table.replace("_subs", "_subs.user = \'"+user+"\'");
-						String generated_query = "DELETE FROM "+target_table+" WHERE "+condition+" LIMIT 1";
 						
-						statement.executeUpdate(generated_query);
+						String [] subs = subject_tables.toString().split(",");
+						for (int i = 0; i < subs.length; i++) {
+							
+							String target_table = subs[i].trim();
+							String condition = target_table.replace("_subs", "_subs.user = \'"+user+"\'");
+							String generated_query = "DELETE FROM "+target_table+" WHERE "+condition+" LIMIT 1";
+							
+							statement.executeUpdate(generated_query);
+						}
+				
+						statement.execute(delete_subjects);
+
 					}
-			
-					statement.execute(delete_subjects);
+					
 					connection.commit();
 					
 				} catch (SQLException e) {
