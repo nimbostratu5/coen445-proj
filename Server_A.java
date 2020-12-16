@@ -309,7 +309,7 @@ public class Server_A {
                         }
 
                         else {
-                            System.out.println("UPDATE-DENIED: user <" + userInfo[0]  + "> does not exist... not deleting");
+                            System.out.println("UPDATE-DENIED: user <" + messageListClient[2].toString()  + "> does not exist... not deleting");
 
                             // Send message to client
                             messageReplyClient = new Object[3];
