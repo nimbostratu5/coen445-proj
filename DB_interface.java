@@ -244,7 +244,7 @@ public class DB_interface{
     
     // Get a list of all existing subjects, their id's and registered user count
     public ArrayList<String []> getAllExistingSubjects() {
-    	String query = "SELECT id,subject,usercount FROM subjects\r\n";
+    	String query = "SELECT id,subject,usercount,last_post FROM subjects\r\n";
     	ArrayList<String[]> subjects = null;
 		try {
 			connection.setAutoCommit(false);
