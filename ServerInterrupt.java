@@ -13,27 +13,29 @@ public class ServerInterrupt implements Runnable {
 
     public static TimerTask task;
     public static Timer timer;
+    public static int delay;
     public ServerInterrupt(Scanner sc, int period) {
         this.sc = sc;
         this.period = period;
+        delay = period;
     }
 
 
     public static void resumeTimerTask() {
-       timer = new Timer();
+        timer = new Timer();
 
-        int delay = period; // delay of 1s before starting task
         TimerTask task = new TimerTask() {
             @Override
             public void run() {
                 if(Server.isServing.get()) {
-                    Server.busy.set(true); //don't think necessary
+                    //Server.busy.set(true); //don't think necessary
                     try {
                         Server.threadPool.execute(new Worker(Server.otherServerIP, Server.otherServerPort, Server.serverSocket, Server.logSem, true));
                     } catch (RejectedExecutionException r) {
                         System.out.println("Server swap attempt was blocked because the Executor is closing.");
+                        pauseTimerTask();
                     }
-                    Server.busy.set(false); //don't think necessary
+                    //Server.busy.set(false); //don't think necessary
                 }
             }
         };
@@ -42,6 +44,7 @@ public class ServerInterrupt implements Runnable {
 
     public static void pauseTimerTask() {
         timer.cancel();
+        timer.purge();
     }
 
 

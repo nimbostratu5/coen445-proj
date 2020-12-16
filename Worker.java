@@ -643,14 +643,18 @@ public class Worker implements Runnable{
 
                     replyMsgServer = new Object[1];
                     replyMsgServer[0] = "READY-SWAP";
+                    ServerInterrupt.pauseTimerTask();
+                    ServerInterrupt.resumeTimerTask();
+                    Server.isServing.set(true);
+                    System.out.println("Now serving");
                     break;
 
                 case "READY-SWAP": //    FROM OTHER SERVER
-                    Server.isServing.set(false);
-                    serverSwap = false;
-                    ServerInterrupt.pauseTimerTask();
 
-                    System.out.println("Change server triggered by timer. This server will no longer serve.");
+                    //serverSwap = false;
+                    ServerInterrupt.pauseTimerTask();
+                    Server.isServing.set(false);
+                    System.out.println("Not longer serving [timer]");
                     try {
                         logSem.acquire();
                         Server.logger.logEvent("change server command triggered by timer. This server will no longer serve.");
