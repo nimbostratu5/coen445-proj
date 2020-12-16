@@ -518,7 +518,10 @@ public class Server_A {
                         messageReplyClient[0] = "FETCH-SUCCESS";
                         messageReplyClient[1] = messageListClient[1].toString(); //rq#
                         messageReplyClient[2] = messageListClient[2].toString(); //username
-                        messageReplyClient[3] = allSubjects;
+                        messageReplyClient[3] = allSubjects;    //SubjectList
+
+                        // To read subjects, cast the output to arraylist
+                        // I.E. new ArrayList<>((ArrayList<String>) receivedMsg[3])
 
                     } catch (SQLException e) {
                         e.printStackTrace();
