@@ -190,11 +190,9 @@ public class DB_interface{
 							
 							statement.executeUpdate(generated_query);
 						}
-				
-						statement.execute(delete_subjects);
-
 					}
-
+									
+					statement.execute(delete_subjects);
 					connection.commit();
 					
 				} catch (SQLException e) {
