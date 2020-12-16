@@ -152,52 +152,58 @@ public class DB_interface{
     
 	// Delete user from the system
     public void deleteUser(String user) {
-//    	find user in users table
-//    	go the user's subjects
-//    	traverse every row subtracting 1 from the user count on subjects
-//		once finished iterating drop user's subject table
-    	String remove_user = String.format("DELETE FROM users WHERE name = \'%s\' LIMIT 1",user);
-    	String decrement_user_count = String.format("UPDATE subjects SET usercount = (usercount - 1) WHERE id IN (SELECT id FROM %s_subjects)",user);
-    	String get_all_registered_subjects = String.format("SELECT id FROM %s_subjects", user);
-    	String delete_subjects = String.format("DROP TABLE %s_subjects", user);
-    	
-    	try {
-			connection.setAutoCommit(false);
+		//    	find user in users table
+		//    	go the user's subjects
+		//    	traverse every row subtracting 1 from the user count on subjects
+		//		once finished iterating drop user's subject table
+				String remove_user = String.format("DELETE FROM users WHERE name = \'%s\' LIMIT 1",user);
+				String decrement_user_count = String.format("UPDATE subjects SET usercount = (usercount - 1) WHERE id IN (SELECT id FROM %s_subjects)",user);
+				String get_all_registered_subjects = String.format("SELECT id FROM %s_subjects", user);
+				String delete_subjects = String.format("DROP TABLE %s_subjects", user);
+				
+				try {
+					connection.setAutoCommit(false);
+					
+					Statement statement = connection.createStatement();
+					
+					statement.execute(remove_user);
+					statement.executeLargeUpdate(decrement_user_count);
+					
+					ResultSet result = statement.executeQuery(get_all_registered_subjects);
+					StringBuilder subject_tables = new StringBuilder();
+					
+					while(result.next()) {
+						subject_tables.append("subject_"+result.getInt("id")+"_subs, ");
+					}
+					
+					subject_tables.deleteCharAt(subject_tables.length()-1);
+					subject_tables.deleteCharAt(subject_tables.length()-1);
+					
+					
+					String [] subs = subject_tables.toString().split(",");
+					for (int i = 0; i < subs.length; i++) {
+						
+						String target_table = subs[i].trim();
+						String condition = target_table.replace("_subs", "_subs.user = \'"+user+"\'");
+						String generated_query = "DELETE FROM "+target_table+" WHERE "+condition+" LIMIT 1";
+						
+						statement.executeUpdate(generated_query);
+					}
 			
-	    	Statement statement = connection.createStatement();
-	    	
-	    	statement.execute(remove_user);
-	    	statement.executeLargeUpdate(decrement_user_count);
-	    	
-	    	ResultSet result = statement.executeQuery(get_all_registered_subjects);
-	    	StringBuilder subject_tables = new StringBuilder();
-	    	
-	    	while(result.next()) {
-	    		subject_tables.append("subject_"+result.getInt("id")+"_subs, ");
-	    	}
-	    	
-	    	subject_tables.deleteCharAt(subject_tables.length()-1);
-	    	subject_tables.deleteCharAt(subject_tables.length()-1);
-	    	
-	    	String set_match = subject_tables.toString().replace("_subs", "_subs.user = \'"+user+"\'");
-	    	
-	    	String total_update = "DELETE FROM "+subject_tables.toString()+" WHERE "+set_match+" LIMIT 1";
-	    	System.out.println(total_update);
-	    	
-	    	statement.executeLargeUpdate(total_update);
-	    	statement.execute(delete_subjects);
-	    	
-	    	connection.commit();
-	    	
-		} catch (SQLException e) {
-			try {
-				connection.rollback();
-			} catch (SQLException e1) {
-				e1.printStackTrace();
+					statement.execute(delete_subjects);
+					connection.commit();
+					
+				} catch (SQLException e) {
+					try {
+						connection.rollback();
+					} catch (SQLException e1) {
+						e1.printStackTrace();
+					}
+					e.printStackTrace();
+				}
+				
+				System.out.println("Successfully deleted user.");
 			}
-			e.printStackTrace();
-		}
-    }
 
     // As an exception if the user is not in the system the function will return null
     // Generally the existence must be verified on the server side
