@@ -1,38 +1,34 @@
-import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Scanner;
 
 public class Logger {
 
-    //this should be in constructor
-    public void CreateFile() {
+    private File myObj;
 
+    //this should be in constructor
+    public void createFile(String filename) {
             try {
-                File myObj = new File("log.txt");
+                myObj = new File((filename+".txt"));
                 if (myObj.createNewFile()) {
-                    System.out.println("File created: " + myObj.getName());
+                    System.out.println("\nLog file created: " + myObj.getName());
                 } else {
-                    System.out.println("File already exists.");
+                    System.out.println("\nWarning: log file with name "+myObj.getName()+" already exists. Re-using "+myObj.getName() +".");
                 }
             } catch (IOException e) {
                 System.out.println("An error occurred.");
                 e.printStackTrace();
             }
-
     }
 
-    public void LogEvent(String event){
+    public void logEvent(String event){
 
         try {
-
             LocalDateTime myDateObj = LocalDateTime.now();
             DateTimeFormatter myFormatObj = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss");
             String formattedDate = myDateObj.format(myFormatObj);
-
-            FileWriter writer = new FileWriter("log.txt", true);
+            FileWriter writer = new FileWriter(myObj.getName(), true);
             writer.write(formattedDate+": "+event);
             writer.write("\r\n");   // write new line
             writer.close();
@@ -42,9 +38,9 @@ public class Logger {
     }
 
     //read the file and display on terminal
-    public void DisplayLog() {
+    public void displayLog() {
         try {
-            FileReader reader = new FileReader("log.txt");
+            FileReader reader = new FileReader(myObj.getName());
             int character;
 
             while ((character = reader.read()) != -1) {
@@ -55,6 +51,20 @@ public class Logger {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    //read the file and display on terminal
+    public void deleteLog() throws IOException {
+
+
+        BufferedWriter out = new BufferedWriter(new FileWriter(myObj.getName()));
+        //out.write("aString1\n");
+        out.close();
+        boolean success = (new File(myObj.getName())).delete();
+        if (success) {
+            System.out.println("The log file has been successfully deleted");
+        }
+
     }
 
 }
